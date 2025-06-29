@@ -3,13 +3,11 @@ import type { Config } from "jest";
 const config: Config = {
   preset: "ts-jest",
   testEnvironment: "node",
-  testMatch: ["**/tests/unit/**/*.test.ts"],
-
+  rootDir: "../..",
+  testMatch: ["<rootDir>/tests/unit/**/*.test.ts"],
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
-  globals: {
-    "ts-jest": {
-      isolatedModules: true,
-    },
+  transform: {
+    "^.+\\.ts$": ["ts-jest", {}], // moved ts-jest config here
   },
 };
 

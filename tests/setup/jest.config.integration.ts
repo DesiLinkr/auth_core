@@ -3,13 +3,12 @@ import type { Config } from "jest";
 const config: Config = {
   preset: "ts-jest",
   testEnvironment: "node",
-  testMatch: ["**/tests/integration/**/*.test.ts"],
+  rootDir: "../..",
+  testMatch: ["<rootDir>/tests/integration/**/*.test.ts"],
   setupFiles: ["dotenv/config"], // loads .env.test
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
-  globals: {
-    "ts-jest": {
-      isolatedModules: true,
-    },
+  transform: {
+    "^.+\\.ts$": ["ts-jest", {}], // moved ts-jest config here
   },
 };
 

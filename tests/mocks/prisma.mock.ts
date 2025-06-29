@@ -1,5 +1,5 @@
 // 👇 Define the mock object
-export const mockPrisma = {
+export const mockPrismaObject = {
   user: {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
@@ -11,17 +11,24 @@ export const mockPrisma = {
     count: jest.fn(),
     aggregate: jest.fn(),
   },
+  email: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
   $connect: jest.fn(),
   $disconnect: jest.fn(),
   $on: jest.fn(),
 };
 
 jest.mock("@prisma/client", () => ({
-  PrismaClient: jest.fn(() => mockPrisma),
+  PrismaClient: jest.fn(() => mockPrismaObject),
 }));
 
 // 👇 Now you can safely import PrismaClient after mocking
 import { PrismaClient } from "@prisma/client";
 
 // 👇 Export instance that uses mockPrisma
-export const prisma = new PrismaClient();
+export const mockPrisma = new PrismaClient();

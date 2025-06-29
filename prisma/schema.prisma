@@ -20,23 +20,34 @@ enum PlanType {
 }
 
 model Email {
-  id         String   @id @default(uuid())
-  userId     String   @unique
-  user       User     @relation(fields: [userId], references: [id])
-  email      String   @unique
-  isPrimary  Boolean
+  id         String  @id @default(uuid())
+  userId     String  @unique
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email      String  @unique
+  isPrimary  Boolean @default(false)
   isVerified Boolean
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  EmailVerificationToken EmailVerificationToken?
 }
 
 model User {
+  id           String   @id @default(uuid())
+  emails       Email[] // One-to-many
+  name         String
+  password     String
+  plan         PlanType @default(FREE)
+  profileImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model EmailVerificationToken {
   id        String   @id @default(uuid())
-  emails    Email[] // One-to-many
-  name      String
-  password  String
-  plan      PlanType @default(FREE)
-  profile   String   @unique
+  tokenHash String // Hashed token
+  emailId   String   @unique
+  email     Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
