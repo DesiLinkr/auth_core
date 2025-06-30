@@ -1,5 +1,5 @@
 import { Email, PrismaClient, User } from "@prisma/client";
-type EmailWithUser = Email & { user: Pick<User, "id" | "name" | "password"> };
+type EmailWithUser = Email & { user: Pick<User, "id" | "name"> };
 
 export class AuthRepository {
   private prisma;
@@ -15,7 +15,6 @@ export class AuthRepository {
           select: {
             name: true,
             id: true,
-            password: true,
           },
         },
       },

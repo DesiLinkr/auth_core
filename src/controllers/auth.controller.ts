@@ -7,15 +7,17 @@ class AuthController {
   constructor(authService?: AuthService) {
     this.AuthService = authService ?? new AuthService();
   }
-  public register = async (req: Request, res: Response) => {
+  public register = async (req: Request, res: Response): Promise<void> => {
     try {
       const { email, name, password } = req.body;
-      const userData = await this.AuthService.register(email, name, password);
+
+      const userData = await this.AuthService.register(name, email, password);
 
       if (!userData) {
-        return res.status(400).json({ message: "User registration failed" });
+        res.status(400).json({ message: "User registration failed" });
+        return;
       }
-      return res.status(201).json(userData);
+      res.status(201).json(userData);
     } catch (error: any) {
       res.status(500).json(error.message);
     }

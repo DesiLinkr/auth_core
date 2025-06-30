@@ -24,7 +24,9 @@ class App {
       res.status(404).json({ message: "Route not found" });
     });
   };
-
+  public getInstance = (): Application => {
+    return this.express;
+  };
   public startServer = () => {
     this.express.listen(this.PORT, () => {
       console.log(`🚀 Server running at http://localhost:${this.PORT}`);

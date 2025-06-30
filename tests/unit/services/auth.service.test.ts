@@ -16,7 +16,6 @@ describe("Auth Service", () => {
     const mockUserData = {
       id: "user1",
       name: "Harsh",
-      password: "secret",
       profileImage: "img.png",
       plan: PlanType.FREE, //  // assuming this is your enum value
       createdAt: new Date(),
@@ -44,7 +43,6 @@ describe("Auth Service", () => {
     const mockUserData = {
       id: "user1",
       name: "Harsh",
-      password: "secret",
       profileImage: "img.png",
       plan: PlanType.FREE, //  // assuming this is your enum value
       createdAt: new Date(),
@@ -71,7 +69,6 @@ describe("Auth Service", () => {
     const mockUserData = {
       id: "user1",
       name: "Harsh",
-      password: "secret",
       profileImage: "img.png",
       plan: PlanType.FREE, //  // assuming this is your enum value
       createdAt: new Date(),
