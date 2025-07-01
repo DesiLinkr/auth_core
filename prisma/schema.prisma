@@ -27,9 +27,8 @@ model Email {
   isPrimary  Boolean @default(false)
   isVerified Boolean
 
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  EmailVerificationToken EmailVerificationToken?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model User {
@@ -41,13 +40,4 @@ model User {
   profileImage String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-}
-
-model EmailVerificationToken {
-  id        String   @id @default(uuid())
-  tokenHash String // Hashed token
-  emailId   String   @unique
-  email     Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
 }

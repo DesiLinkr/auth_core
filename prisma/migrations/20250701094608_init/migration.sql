@@ -20,7 +20,7 @@ CREATE TABLE "User" (
     "name" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "plan" "PlanType" NOT NULL DEFAULT 'FREE',
-    "profileImage" TEXT NOT NULL,
+    "profileImage" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -32,9 +32,6 @@ CREATE UNIQUE INDEX "Email_userId_key" ON "Email"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Email_email_key" ON "Email"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_profileImage_key" ON "User"("profileImage");
 
 -- AddForeignKey
 ALTER TABLE "Email" ADD CONSTRAINT "Email_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
