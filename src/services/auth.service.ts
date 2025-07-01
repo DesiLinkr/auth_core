@@ -17,14 +17,17 @@ export class AuthService {
   ) => {
     try {
       const existing: any = await this.AuthRepo.findByEmail(email);
+
       if (existing) {
-        const primaryEmail = existing.emails?.find((e: any) => e.isPrimary);
-        const isVerified = primaryEmail?.isVerified ?? false;
+        const isVerified = existing.isVerified;
 
         if (!isVerified) {
-          throw new Error("User already exists but not verified");
+          return {
+            error: "User already exists but not verified",
+            status: 409,
+          };
         }
-        throw new Error("User already exists");
+        return { error: "User already exists", status: 409 };
       }
       const hashPassword = await this.Hasher.Password(rawPassword);
       const userData = await this.AuthRepo.createUser(
@@ -32,12 +35,10 @@ export class AuthService {
         name,
         hashPassword
       );
-      if (userData) {
-        // add email logic here in future
-      }
       if (!userData) {
-        throw new Error("User registration failed");
+        return { error: "User registration failed", status: 422 };
       }
+      // add email logic here in future
 
       const { password, ...safeUser } = userData;
 

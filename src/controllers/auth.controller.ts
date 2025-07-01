@@ -12,9 +12,12 @@ class AuthController {
       const { email, name, password } = req.body;
 
       const userData = await this.AuthService.register(name, email, password);
-
       if (!userData) {
         res.status(400).json({ message: "User registration failed" });
+        return;
+      }
+      if ("error" in userData) {
+        res.status(userData.status).json({ message: userData.error });
         return;
       }
       res.status(201).json(userData);

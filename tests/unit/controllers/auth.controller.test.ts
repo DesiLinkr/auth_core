@@ -48,7 +48,9 @@ describe(" Auth Repository", () => {
   it("should return 400 when user registration fails (e.g., userData is null)", async () => {
     mockAuthService.register.mockResolvedValue(null);
     await authController.register(req, res);
+
     expect(res.status).toHaveBeenCalledWith(400);
+
     expect(res.json).toHaveBeenCalledWith(mockUserData);
   });
 

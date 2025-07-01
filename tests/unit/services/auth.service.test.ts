@@ -61,9 +61,12 @@ describe("Auth Service", () => {
     };
     mockAuthRepo.findByEmail.mockResolvedValue(mockUserData);
 
-    await expect(authService.register(name, email, password)).rejects.toThrow(
-      "User already exists"
-    );
+    const result = await authService.register(name, email, password);
+
+    expect(result).toEqual({
+      error: "User already exists but not verified",
+      status: 409,
+    });
   });
   it("should throw an error when the email is already taken but not verified", async () => {
     const mockUserData = {
@@ -86,10 +89,12 @@ describe("Auth Service", () => {
       ],
     };
     mockAuthRepo.findByEmail.mockResolvedValue(mockUserData);
+    const result = await authService.register(name, email, password);
 
-    await expect(authService.register(name, email, password)).rejects.toThrow(
-      "User already exists but not verified"
-    );
+    expect(result).toEqual({
+      error: "User already exists but not verified",
+      status: 409,
+    });
   });
   it("should throw an internal server error if something unexpected occurs in repository", async () => {
     const mockRepo = {

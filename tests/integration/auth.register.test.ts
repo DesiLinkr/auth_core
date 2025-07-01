@@ -17,7 +17,7 @@ describe("POST /api/auth/register", () => {
     expect(res.body).toHaveProperty("name", body.name);
     expect(res.body.emails[0]).toHaveProperty("email", body.email);
   });
-  it("Returns 500 if email is already taken", async () => {
+  it("Returns 409 if email is already taken but not verified", async () => {
     const body = {
       name: "Harsh",
       email,
@@ -25,12 +25,26 @@ describe("POST /api/auth/register", () => {
     };
     const res = await request(app).post("/api/auth/register").send(body);
 
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(409);
     expect(res.body).toEqual({
-      error: "Validation error",
-      details: ['"email" is required'],
+      message: "User already exists but not verified",
     });
   });
+
+  it("Returns 409 if email is already taken  verified", async () => {
+    const body = {
+      name: "Harsh",
+      email: "test@example.com",
+      password: "StrongPass123",
+    };
+    const res = await request(app).post("/api/auth/register").send(body);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual({
+      message: "User already exists",
+    });
+  });
+
   it("Returns 400 if email is missing", async () => {
     const body = {
       name: "Harsh",
