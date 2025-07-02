@@ -12,4 +12,9 @@ AuthRouter.post(
   authController.register
 );
 
+AuthRouter.post(
+  "/forgot-password",
+  validate(AuthValidation.forgotPassword),
+  authController.forgotPassword)
+
 export default AuthRouter;
