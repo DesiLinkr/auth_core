@@ -6,4 +6,8 @@ export class AuthValidation {
     password: Joi.string().min(8).required(),
     name: Joi.string().min(5).required(),
   });
+
+  static forgotPassword = Joi.object({
+    email: Joi.string().email().required(),
+  });
 }
