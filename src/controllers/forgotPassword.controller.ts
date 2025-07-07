@@ -8,32 +8,18 @@ class ForgotPasswordController {
     this.forgotPasswordService = new ForgotPasswordService();
   }
 
-  public forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  public sendPasswordResetToken = async (req: Request, res: Response): Promise<void> => {
     try {
       const { email } = req.body;
-
       const result = await this.forgotPasswordService.requestPasswordReset(email);
 
-      if ("error" in result) {
-        const statusCode = result.status ?? 400;
-        res.status(statusCode).json({
-          success: false,
-          message: result.error,
-          statusCode: result.status,
-        });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        message: result.message,
-        statusCode: 200,
-      });
+      
+      res.status(result.status || 200).json(result);
     } catch (error: any) {
       res.status(500).json({
         success: false,
         message: error.message || "Internal server error",
-        statusCode: 500,
+        status: 500,
       });
     }
   };

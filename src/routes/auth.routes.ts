@@ -17,6 +17,6 @@ AuthRouter.post(
 AuthRouter.post(
   "/forgot-password",
   validate(AuthValidation.forgotPassword),
-  forgotPasswordController.forgotPassword)
+  forgotPasswordController.sendPasswordResetToken)
 
 export default AuthRouter;
