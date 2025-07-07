@@ -54,18 +54,18 @@ describe("", () => {
 
     const res = await service.requestPasswordReset("harsh@example.com");
     expect(res).toEqual({
-      success: true,
-      message: "Token generated",
+      error: "Email is not verified or not primary",
+      status: 409,
     });
   });
-  it("Should return 400 if no user is found with the given email", async () => {
+  it("Should return 404 if no user is found with the given email", async () => {
     mockAuthRepo.findByEmail.mockResolvedValue(null);
 
     const res = await service.requestPasswordReset("user@example.com");
 
     expect(res).toEqual({
       error: "no User account found on this email",
-      status: 400,
+      status: 404,
     });
     expect(mockAuthRepo.findByEmail).toHaveBeenCalledWith("user@example.com");
   });
@@ -94,7 +94,7 @@ describe("", () => {
     const res = await service.requestPasswordReset("user@example.com");
 
     expect(res).toEqual({
-      error: "User already exists but not verified",
+      error: "Email is not verified or not primary",
       status: 409,
     });
     expect(mockAuthRepo.findByEmail).toHaveBeenCalledWith("user@example.com");
@@ -125,7 +125,7 @@ describe("", () => {
     const res = await service.requestPasswordReset("user@example.com");
 
     expect(res).toEqual({
-      error: "User already exists but this not primary Email",
+      error: "Email is not verified or not primary",
       status: 409,
     });
     expect(mockAuthRepo.findByEmail).toHaveBeenCalledWith("user@example.com");

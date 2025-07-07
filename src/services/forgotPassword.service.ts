@@ -12,34 +12,32 @@ export class ForgotPasswordService {
     this.cache = cache ?? new ForgotPasswordTokenCache();
   }
   requestPasswordReset = async (email: string) => {
-    const token = await this.Hasher.generateToken();
-    const userData: any = await this.AuthRepo.findByEmail(email);
+    try {
+      const token = await this.Hasher.generateToken();
+      const userData: any = await this.AuthRepo.findByEmail(email);
 
-    if (!userData) {
-      return {
-        error: "no User account found on this email",
-        status: 400,
-      };
-    }
-    if (!userData?.emails[0].isVerified) {
-      return {
-        error: "User already exists but not verified",
-        status: 409,
-      };
-    }
-    if (!userData?.emails[0].isPrimary) {
-      return {
-        error: "User already exists but this not primary Email",
-        status: 409,
-      };
-    }
+      if (!userData) {
+        return {
+          error: "no User account found on this email",
+          status: 404,
+        };
+      }
+      if (!userData.isVerified || !userData.isPrimary) {
+        return {
+          error: "Email is not verified or not primary",
+          status: 409,
+        };
+      }
 
-    await this.cache.createToken(userData.id, token);
+      await this.cache.createToken(userData.user.id, token);
 
-    return {
-      success: true,
-      message: "Token generated",
-    };
-    // add email logic here in future
+      return {
+        message:
+          "If this email exists, password reset instructions have been sent.",
+      };
+      // add email logic here in future
+    } catch (error: any) {
+      throw new Error(error.message || "Internal server error");
+    }
   };
 }
