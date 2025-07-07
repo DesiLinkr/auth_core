@@ -1,8 +1,8 @@
 import { Request } from "express";
 import AuthController from "../../../src/controllers/auth.controller";
-import { AuthService } from "../../../src/services/auth.service"; 
+import { AuthService } from "../../../src/services/auth.service";
 
-describe("AuthController", () => {
+describe("AuthController - register", () => {
   const mockUserData = {
     id: "user1",
     name: "Harsh",
@@ -24,13 +24,10 @@ describe("AuthController", () => {
     ],
   };
 
-  // Mock service with both methods
   const mockAuthService: Partial<AuthService> = {
     register: jest.fn(),
-    forgetPassword: jest.fn(),
   };
 
-  // Cast as full AuthService
   const authController = new AuthController(mockAuthService as AuthService);
 
   const res = {
@@ -50,7 +47,6 @@ describe("AuthController", () => {
     jest.clearAllMocks();
   });
 
-  //registration Tests
   it("should register a user and return 201 with user data when input is valid", async () => {
     (mockAuthService.register as jest.Mock).mockResolvedValue(mockUserData);
 
@@ -78,59 +74,5 @@ describe("AuthController", () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith("Internal server error");
-  });
-
-  // Forgot Password Tests
-  describe("forgotPassword", () => {
-    const forgotReq = {
-      body: { email: "harsh@example.com" },
-    } as Request;
-
-    it("should return 200 when forgotPassword succeeds", async () => {
-      (mockAuthService.forgetPassword as jest.Mock).mockResolvedValue({
-        message: "Reset email sent",
-        status: 200,
-      });
-
-      await authController.forgotPassword(forgotReq, res);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        message: "Reset email sent",
-        statusCode: 200,
-      });
-    });
-
-    it("should return 404 when user is not found", async () => {
-      (mockAuthService.forgetPassword as jest.Mock).mockResolvedValue({
-        error: "User not found",
-        status: 404,
-      });
-
-      await authController.forgotPassword(forgotReq, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "User not found",
-        statusCode: 404,
-      });
-    });
-
-    it("should return 500 if service throws an error", async () => {
-      (mockAuthService.forgetPassword as jest.Mock).mockRejectedValue(
-        new Error("Unexpected error")
-      );
-
-      await authController.forgotPassword(forgotReq, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        message: "Unexpected error",
-        statusCode: 500,
-      });
-    });
   });
 });
