@@ -6,7 +6,14 @@ export class AuthRepository {
   constructor(prisma?: PrismaClient) {
     this.prisma = prisma ?? new PrismaClient(); // fallback to real if none provided
   }
-
+  public findUserInfoById = async (id: string) => {
+    return await this.prisma.user.findUnique({
+      where: { id },
+      omit: {
+        password: true,
+      },
+    });
+  };
   public findByEmail = async (email: string): Promise<EmailWithUser | null> => {
     return await this.prisma.email.findUnique({
       where: { email },

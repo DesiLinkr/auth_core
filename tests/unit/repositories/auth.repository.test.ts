@@ -47,11 +47,34 @@ describe(" Auth Repository", () => {
     expect(user).not.toBeNull();
     expect(user).toBe(mockUser);
   });
-  it("should returns user when email  exist  ", async () => {
-    (mockPrisma.email.findUnique as jest.Mock).mockResolvedValue(mockUser);
-    const user = await AuthRepo.findByEmail(email);
-    expect(user).not.toBeNull();
-    expect(user).toBe(mockUser);
+  it("should return user info by ID without password field when user exists", async () => {
+    const expectedUserInfo = {
+      id: mockUserData.id,
+      name: mockUserData.name,
+      profileImage: mockUserData.profileImage,
+      plan: mockUserData.plan,
+      createdAt: mockUserData.createdAt,
+      updatedAt: mockUserData.updatedAt,
+      emails: mockUserData.emails,
+      // password field intentionally omitted
+    };
+
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(
+      expectedUserInfo
+    );
+
+    const result: any = await AuthRepo.findUserInfoById(mockUserData.id);
+    ``;
+    expect(result).toEqual(expectedUserInfo);
+    expect(result?.password).toBeUndefined(); // make sure password is not present
+  });
+
+  it("should return null when user does not exist", async () => {
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const result = await AuthRepo.findUserInfoById("non_existing_user_id");
+
+    expect(result).toBeNull();
   });
 
   it("should create a user with provided data &&  return the created user object on success  ", async () => {
