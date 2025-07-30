@@ -23,7 +23,7 @@ import { Timestamp } from "./google/protobuf/timestamp";
 export const protobufPackage = "auth";
 
 export interface UserInfoRequest {
-  id: string;
+  userId: string;
 }
 
 export interface UserInfoResponse {
@@ -36,13 +36,13 @@ export interface UserInfoResponse {
 }
 
 function createBaseUserInfoRequest(): UserInfoRequest {
-  return { id: "" };
+  return { userId: "" };
 }
 
 export const UserInfoRequest: MessageFns<UserInfoRequest> = {
   encode(message: UserInfoRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.id !== "") {
-      writer.uint32(10).string(message.id);
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
     }
     return writer;
   },
@@ -59,7 +59,7 @@ export const UserInfoRequest: MessageFns<UserInfoRequest> = {
             break;
           }
 
-          message.id = reader.string();
+          message.userId = reader.string();
           continue;
         }
       }
@@ -72,13 +72,13 @@ export const UserInfoRequest: MessageFns<UserInfoRequest> = {
   },
 
   fromJSON(object: any): UserInfoRequest {
-    return { id: isSet(object.id) ? globalThis.String(object.id) : "" };
+    return { userId: isSet(object.userId) ? globalThis.String(object.userId) : "" };
   },
 
   toJSON(message: UserInfoRequest): unknown {
     const obj: any = {};
-    if (message.id !== "") {
-      obj.id = message.id;
+    if (message.userId !== "") {
+      obj.userId = message.userId;
     }
     return obj;
   },
@@ -88,7 +88,7 @@ export const UserInfoRequest: MessageFns<UserInfoRequest> = {
   },
   fromPartial<I extends Exact<DeepPartial<UserInfoRequest>, I>>(object: I): UserInfoRequest {
     const message = createBaseUserInfoRequest();
-    message.id = object.id ?? "";
+    message.userId = object.userId ?? "";
     return message;
   },
 };

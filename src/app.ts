@@ -8,7 +8,7 @@ class App {
   private express: Application;
   private PORT: number;
   constructor() {
-    this.PORT = Number(process.env.PORT) || 8082;
+    this.PORT = Number(process.env.PORT);
     this.express = express();
     this.middleware();
     this.routes();
@@ -30,7 +30,8 @@ class App {
   public getInstance = (): Application => {
     return this.express;
   };
-  public startServers = async () => {
+  public startServers = async (port: number) => {
+    this.PORT = this.PORT || port;
     this.express.listen(this.PORT, () => {
       console.log(`🚀 Server running at http://localhost:${this.PORT}`);
     });
