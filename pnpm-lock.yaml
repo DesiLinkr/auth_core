@@ -34,7 +34,7 @@ importers:
         version: 1.24.11
       grpc-protos:
         specifier: github:Harsh-Tagra/grpc-protos
-        version: https://codeload.github.com/Harsh-Tagra/grpc-protos/tar.gz/f6ffac9326e5ee9e12de610a170cb988a5a2ed1b
+        version: https://codeload.github.com/Harsh-Tagra/grpc-protos/tar.gz/d39d8eda27ffcf0d1bfbe519d808bd6074c04d42
       ioredis:
         specifier: ^5.6.1
         version: 5.6.1
@@ -1327,8 +1327,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  grpc-protos@https://codeload.github.com/Harsh-Tagra/grpc-protos/tar.gz/f6ffac9326e5ee9e12de610a170cb988a5a2ed1b:
-    resolution: {tarball: https://codeload.github.com/Harsh-Tagra/grpc-protos/tar.gz/f6ffac9326e5ee9e12de610a170cb988a5a2ed1b}
+  grpc-protos@https://codeload.github.com/Harsh-Tagra/grpc-protos/tar.gz/d39d8eda27ffcf0d1bfbe519d808bd6074c04d42:
+    resolution: {tarball: https://codeload.github.com/Harsh-Tagra/grpc-protos/tar.gz/d39d8eda27ffcf0d1bfbe519d808bd6074c04d42}
     version: 1.0.0
 
   grpc@1.24.11:
@@ -3906,7 +3906,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  grpc-protos@https://codeload.github.com/Harsh-Tagra/grpc-protos/tar.gz/f6ffac9326e5ee9e12de610a170cb988a5a2ed1b: {}
+  grpc-protos@https://codeload.github.com/Harsh-Tagra/grpc-protos/tar.gz/d39d8eda27ffcf0d1bfbe519d808bd6074c04d42: {}
 
   grpc@1.24.11:
     dependencies:
