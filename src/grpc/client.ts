@@ -3,13 +3,14 @@ import { credentials } from "@grpc/grpc-js";
 import { SessionServiceClient } from "./generated/session";
 import { AccessServiceClient } from "./generated/access";
 
+const Acess_core = process.env.Acess_core_grpc_URL || "localhost:5052";
 const sessionClient = new SessionServiceClient(
-  "localhost:5052",
+  Acess_core,
   credentials.createInsecure()
 );
 
 const accessClient = new AccessServiceClient(
-  "localhost:5052",
+  Acess_core,
   credentials.createInsecure()
 );
 
