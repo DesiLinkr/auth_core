@@ -11,7 +11,8 @@ describe("API Integration Test - /change-password", () => {
         Math.floor(Math.random() * 78)
       )
     ).join("");
-  const password = randomPassword(16);
+  const newPassword = randomPassword(16);
+  const oldPassword = "4Qx{$k6&vRI_Zg*h";
   it("should update password successfully if not same as old password ", async () => {
     const res = await request(app)
       .post("/api/settings/change-password")
@@ -19,11 +20,53 @@ describe("API Integration Test - /change-password", () => {
       .set("User-Agent", "integration-test")
       .set("x-forwarded-for", "127.0.0.1") // depends on your auth
       .send({
-        password,
+        oldPassword,
+        newPassword,
       });
 
     expect(res.status).toBe(200);
+    await request(app)
+      .post("/api/settings/change-password")
+      .set("Authorization", `Bearer ${token}`)
+      .set("User-Agent", "integration-test")
+      .set("x-forwarded-for", "127.0.0.1") // depends on your auth
+      .send({
+        newPassword: oldPassword,
+        oldPassword: newPassword,
+      });
   });
+
+  it("should fail when incorrect old password", async () => {
+    const res = await request(app)
+      .post("/api/settings/change-password")
+      .set("Authorization", `Bearer ${token}`)
+      .set("User-Agent", "integration-test")
+      .set("x-forwarded-for", "127.0.0.1") // depends on your auth
+      .send({
+        oldPassword: "333eee3322",
+        newPassword,
+      });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ message: "incorrect password" });
+  });
+
+  it("should fail when  old password invaild", async () => {
+    const res = await request(app)
+      .post("/api/settings/change-password")
+      .set("Authorization", `Bearer ${token}`)
+      .set("User-Agent", "integration-test")
+      .set("x-forwarded-for", "127.0.0.1") // depends on your auth
+      .send({
+        oldPassword: "3330",
+        newPassword,
+      });
+    expect(res.body).toEqual({
+      error: "Validation error",
+      details: ['"oldPassword" length must be at least 8 characters long'],
+    });
+  });
+
   it("should fail when new password is the same as old password", async () => {
     const res = await request(app)
       .post("/api/settings/change-password")
@@ -31,10 +74,11 @@ describe("API Integration Test - /change-password", () => {
       .set("User-Agent", "integration-test")
       .set("x-forwarded-for", "127.0.0.1")
       .send({
-        password,
+        oldPassword,
+        newPassword: oldPassword,
       });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
     expect(res.body).toHaveProperty(
       "message",
       "you can not use same password as old password"
@@ -59,13 +103,16 @@ describe("API Integration Test - /change-password", () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it("Returns 400 if email is missing", async () => {
-    const res = await request(app).post("/api/settings/change-password");
+  it("Returns 400 if oldPassword is missing", async () => {
+    const res = await request(app)
+      .post("/api/settings/change-password")
+      .send({ newPassword: "NewPass123n" });
 
     expect(res.statusCode).toBe(400);
+
     expect(res.body).toEqual({
       error: "Validation error",
-      details: ['"new" is required'],
+      details: ['"oldPassword" is required'],
     });
   });
 });

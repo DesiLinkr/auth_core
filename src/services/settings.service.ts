@@ -19,19 +19,27 @@ export class SettingsService {
     oldPassword: string
   ) => {
     const user: any = await this.settingsRepo.findUserInfoById(userId);
+    const isSameasOldpassword = await this.hasher.comparePassword(
+      oldPassword,
+      user.password
+    );
 
-    if (user.password != oldPassword) {
+    if (!isSameasOldpassword) {
       return {
-        error: "Incorrect password",
-        status: 400,
+        error: "incorrect password",
+        status: 401,
       };
     }
-    const isSame = await this.hasher.comparePassword(newPassword, oldPassword);
+
+    const isSame = await this.hasher.comparePassword(
+      newPassword,
+      user.password
+    );
 
     if (isSame) {
       return {
         error: "you can not use same password as old password",
-        status: 400,
+        status: 409,
       };
     }
 
