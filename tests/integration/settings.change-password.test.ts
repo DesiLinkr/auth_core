@@ -67,7 +67,25 @@ describe("API Integration Test - /change-password", () => {
     });
   });
 
-  it("should fail when new password is the same as old password", async () => {
+  it("should fail when new password is the same as old password at db ", async () => {
+    const res = await request(app)
+      .post("/api/settings/change-password")
+      .set("Authorization", `Bearer ${token}`)
+      .set("User-Agent", "integration-test")
+      .set("x-forwarded-for", "127.0.0.1")
+      .send({
+        oldPassword: "lol@3554",
+        newPassword: oldPassword,
+      });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toHaveProperty(
+      "message",
+      "you can not use same password as old password"
+    );
+  });
+
+  it("should return 400 if new password is same as old", async () => {
     const res = await request(app)
       .post("/api/settings/change-password")
       .set("Authorization", `Bearer ${token}`)
@@ -78,12 +96,12 @@ describe("API Integration Test - /change-password", () => {
         newPassword: oldPassword,
       });
 
-    expect(res.status).toBe(409);
-    expect(res.body).toHaveProperty(
-      "message",
-      "you can not use same password as old password"
-    );
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("details", [
+      '"newPassword" contains an invalid value',
+    ]);
   });
+
   it("should return 401 when no token is provided", async () => {
     const res = await request(app)
       .post("/api/settings/change-password")
