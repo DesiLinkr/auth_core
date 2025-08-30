@@ -16,7 +16,8 @@ describe("SettingsService.changePassword", () => {
   const oldPasswordHash = "old-password-hash";
 
   beforeEach(() => {
-    // mock repositories + utils
+    jest.clearAllMocks();
+
     mockSettingsRepo = {
       findUserInfoById: jest.fn(),
       setPassword: jest.fn(),
@@ -27,27 +28,55 @@ describe("SettingsService.changePassword", () => {
       Password: jest.fn(),
     } as any;
 
-    // Inject mocks into service
     service = new SettingsService(
       new AuthRepository() as any,
       mockSettingsRepo
     );
-
-    // Override hasher instance inside service
     (service as any).hasher = mockHasher;
+  });
+
+  it("should return error if user is not found", async () => {
+    mockSettingsRepo.findUserInfoById.mockResolvedValue(null);
+
+    await expect(
+      service.changePassword(userId, "new-pass", "old-pass")
+    ).rejects.toThrow("Cannot read properties of null");
+    // or you can modify service to throw custom error if needed
+  });
+
+  it("should return error if old password is incorrect", async () => {
+    mockSettingsRepo.findUserInfoById.mockResolvedValue({
+      password: oldPasswordHash,
+    } as any);
+    mockHasher.comparePassword.mockResolvedValueOnce(false); // old password check fails
+
+    const result = await service.changePassword(
+      userId,
+      "new-pass",
+      "wrong-old-pass"
+    );
+
+    expect(result).toEqual({
+      error: "incorrect password",
+      status: 401,
+    });
+    expect(mockSettingsRepo.setPassword).not.toHaveBeenCalled();
   });
 
   it("should return error if new password is same as old one", async () => {
     mockSettingsRepo.findUserInfoById.mockResolvedValue({
       password: oldPasswordHash,
     } as any);
-    mockHasher.comparePassword.mockReturnValue(true as any); // same password
+    // first compare (old password) → true
+    mockHasher.comparePassword.mockResolvedValueOnce(true);
+    // second compare (new password vs stored hash) → true (same)
+    mockHasher.comparePassword.mockResolvedValueOnce(true);
 
-    const result = await service.changePassword(userId, "new-password");
+    const result = await service.changePassword(userId, "new-pass", "old-pass");
 
     expect(result).toEqual({
       error: "you can not use same password as old password",
-      status: 400,
+      status: 409,
     });
     expect(mockSettingsRepo.setPassword).not.toHaveBeenCalled();
   });
@@ -56,16 +85,38 @@ describe("SettingsService.changePassword", () => {
     mockSettingsRepo.findUserInfoById.mockResolvedValue({
       password: oldPasswordHash,
     } as any);
-    mockHasher.comparePassword.mockReturnValue(false as any); // different password
-    mockHasher.Password.mockResolvedValue("hashed-new-password");
+    // first compare (old password check) → true
+    mockHasher.comparePassword.mockResolvedValueOnce(true);
+    // second compare (new password vs old hash) → false (different password)
+    mockHasher.comparePassword.mockResolvedValueOnce(false);
+    mockHasher.Password.mockResolvedValue("hashed-new-pass");
 
-    const result = await service.changePassword(userId, "new-password");
+    const result = await service.changePassword(userId, "new-pass", "old-pass");
 
-    expect(mockHasher.Password).toHaveBeenCalledWith("new-password");
+    expect(mockHasher.Password).toHaveBeenCalledWith("new-pass");
     expect(mockSettingsRepo.setPassword).toHaveBeenCalledWith(
       userId,
-      "hashed-new-password"
+      "hashed-new-pass"
     );
     expect(result).toEqual({ message: "password changed" });
+  });
+
+  it("should bubble up repository errors", async () => {
+    mockSettingsRepo.findUserInfoById.mockRejectedValue(new Error("DB error"));
+
+    await expect(
+      service.changePassword(userId, "new-pass", "old-pass")
+    ).rejects.toThrow("DB error");
+  });
+
+  it("should bubble up hasher errors", async () => {
+    mockSettingsRepo.findUserInfoById.mockResolvedValue({
+      password: oldPasswordHash,
+    } as any);
+    mockHasher.comparePassword.mockRejectedValue(new Error("hash error"));
+
+    await expect(
+      service.changePassword(userId, "new-pass", "old-pass")
+    ).rejects.toThrow("hash error");
   });
 });

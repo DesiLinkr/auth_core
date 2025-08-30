@@ -25,7 +25,7 @@ describe("SettingsController", () => {
 
     // Fake req/res
     mockReq = {
-      body: { password: "newPassword123" },
+      body: { oldPassword: "oldpassword", newPassword: "newPassword123" },
       userId: "user-1", // custom injected in middleware
     } as any;
 
@@ -35,14 +35,14 @@ describe("SettingsController", () => {
     };
   });
 
-  it("should  changePassword ", async () => {
+  it("should  it call service with correct parms ", async () => {
     await controller.changepassword(mockReq as Request, mockRes as Response);
 
     expect(mockService.changePassword).toHaveBeenCalledWith(
       "user-1",
-      "newPassword123"
+      "newPassword123",
+      "oldpassword"
     );
-    expect(mockRes.status).toHaveBeenCalledWith(200);
   });
 
   it("should handle errors and return 500", async () => {

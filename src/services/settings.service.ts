@@ -19,6 +19,7 @@ export class SettingsService {
     oldPassword: string
   ) => {
     const user: any = await this.settingsRepo.findUserInfoById(userId);
+
     const isSameasOldpassword = await this.hasher.comparePassword(
       oldPassword,
       user.password
