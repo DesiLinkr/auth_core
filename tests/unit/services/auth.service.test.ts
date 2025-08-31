@@ -41,13 +41,23 @@ describe("Auth Service", () => {
   });
   it("should throw an error when the email is already taken and verified", async () => {
     const mockUserData = {
-      id: "email1",
-      email: "harsh@example.com",
-      isPrimary: true,
-      isVerified: true,
-      userId: "user1",
+      id: "user1",
+      name: "Harsh",
+      profileImage: "img.png",
+      plan: PlanType.FREE, //  // assuming this is your enum value
       createdAt: new Date(),
       updatedAt: new Date(),
+      emails: [
+        {
+          id: "email1",
+          email: "harsh@example.com",
+          isPrimary: true,
+          isVerified: true,
+          userId: "user1",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
     };
     mockAuthRepo.findByEmail.mockResolvedValue(mockUserData);
 

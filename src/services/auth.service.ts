@@ -19,7 +19,7 @@ export class AuthService {
       const existing: any = await this.AuthRepo.findByEmail(email);
 
       if (existing) {
-        const isVerified = existing.isVerified;
+        const isVerified = existing.emails[0].isVerified;
 
         if (!isVerified) {
           return {
