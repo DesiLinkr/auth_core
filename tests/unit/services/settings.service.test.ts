@@ -85,10 +85,9 @@ describe("SettingsService.changePassword", () => {
     mockSettingsRepo.findUserInfoById.mockResolvedValue({
       password: oldPasswordHash,
     } as any);
-    // first compare (old password check) → true
-    mockHasher.comparePassword.mockResolvedValueOnce(true);
-    // second compare (new password vs old hash) → false (different password)
+
     mockHasher.comparePassword.mockResolvedValueOnce(false);
+    mockHasher.comparePassword.mockResolvedValueOnce(true);
     mockHasher.Password.mockResolvedValue("hashed-new-pass");
 
     const result = await service.changePassword(userId, "new-pass", "old-pass");
