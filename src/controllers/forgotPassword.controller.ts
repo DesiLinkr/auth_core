@@ -24,6 +24,8 @@ class ForgotPasswordController {
       }
       res.status(200).json(result);
     } catch (error: any) {
+      console.log(error);
+
       res.status(500).json("Internal server error");
     }
   };
