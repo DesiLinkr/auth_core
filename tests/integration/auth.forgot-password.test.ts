@@ -42,7 +42,7 @@ describe("POST /api/auth/forgot-password", () => {
 
   it("Returns 403 if email exists but is not verified or not primary", async () => {
     const res = await request(app).post(baseUrl).send({
-      email: "1751903160760@example.com", // Simulate unverified email
+      email: "secondary@example.com", // Simulate unverified email
     });
 
     expect(res.statusCode).toBe(409);

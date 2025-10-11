@@ -2,7 +2,7 @@ import { grpcClient } from "../grpc/client";
 import {
   CreateSessionRequest,
   CreateSessionResponse,
-} from "../grpc/generated/session";
+} from "../grpc/generated/access";
 import {
   AccessVerifierRequest,
   AccessVerifierResponse,
@@ -19,11 +19,11 @@ import { response } from "express";
 import axios from "axios";
 import { Customformat } from "./timeformat";
 
-export function createSessionGrpc(
+export function createSession(
   request: CreateSessionRequest
 ): Promise<CreateSessionResponse> {
   return new Promise((resolve, reject) => {
-    grpcClient.session.createSession(request, (error, response) => {
+    grpcClient.access.createSession(request, (error, response) => {
       if (error) {
         reject(error);
       } else {
@@ -50,7 +50,7 @@ export const AccessVerifier = (
   request: AccessVerifierRequest
 ): Promise<AccessVerifierResponse> => {
   return new Promise((resolve, reject) => {
-    grpcClient.accessVerifier.verify(request, (error, response) => {
+    grpcClient.access.verify(request, (error, response) => {
       if (error) {
         reject(error);
       } else {

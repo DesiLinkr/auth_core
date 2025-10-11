@@ -10,11 +10,11 @@ jest.mock("../../../src/redis/client", () => {
   };
 });
 
-import { ForgotPasswordTokenCache } from "../../../src/cache/forgotPassword.cache";
+import { SecureTokenCache } from "../../../src/cache/secure.cache";
 import { redisClient } from "../../../src/redis/client";
 
-describe("ForgotPasswordTokenCache", () => {
-  const cache = new ForgotPasswordTokenCache();
+describe("secureTokenCache", () => {
+  const cache = new SecureTokenCache();
   const userId = "user-123";
   const token = "secure-token-xyz";
 
@@ -24,7 +24,7 @@ describe("ForgotPasswordTokenCache", () => {
     await cache.createToken(userId, token, 600);
 
     expect(redisClient.set).toHaveBeenCalledWith(
-      "forgot:user-123",
+      "secure:user-123",
       token,
       "EX",
       600

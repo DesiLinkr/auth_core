@@ -1,4 +1,3 @@
-import { SessionServiceServer } from "../generated/session";
 import { UserServer } from "../generated/user";
 import { UserHandlers } from "../handlers/user.handler";
 
