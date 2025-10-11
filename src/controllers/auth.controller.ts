@@ -25,6 +25,31 @@ class AuthController {
       res.status(500).json(error.message);
     }
   };
+  public login = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, password } = req.body;
+      const { ip, user_agent } = (req as any).clientInfo;
+      const userData = await this.AuthService.login(
+        email,
+        password,
+        ip,
+        user_agent
+      );
+      if (!userData) {
+        res.status(400).json({ message: "User registration failed" });
+        return;
+      }
+      if ("error" in userData) {
+        res.status(userData.status).json({ message: userData.error });
+        return;
+      }
+      res.status(200).json(userData);
+    } catch (error: any) {
+      console.log(error);
+
+      res.status(500).json(error.message);
+    }
+  };
 }
 
 export default AuthController;

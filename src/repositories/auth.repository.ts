@@ -22,6 +22,7 @@ export class AuthRepository {
           select: {
             name: true,
             id: true,
+            password: true,
           },
         },
       },

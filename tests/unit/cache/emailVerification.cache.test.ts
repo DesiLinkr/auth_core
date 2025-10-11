@@ -10,24 +10,24 @@ jest.mock("../../../src/redis/client", () => {
   };
 });
 
-import { ForgotPasswordTokenCache } from "../../../src/cache/forgotPassword.cache";
+import { EmailVerificationTokenCache } from "../../../src/cache/emailVerification.cache";
 import { redisClient } from "../../../src/redis/client";
 
-describe("ForgotPasswordTokenCache", () => {
-  const cache = new ForgotPasswordTokenCache();
+describe("EmailVerificationTokenCache", () => {
+  const cache = new EmailVerificationTokenCache();
   const userId = "user-123";
   const token = "secure-token-xyz";
 
   it("should set token with TTL", async () => {
     (redisClient.set as jest.Mock).mockResolvedValue("OK");
 
-    await cache.createToken(userId, token, 600);
+    await cache.createToken(userId, token, 900);
 
     expect(redisClient.set).toHaveBeenCalledWith(
-      "forgot:user-123",
+      "verify:user-123",
       token,
       "EX",
-      600
+      900
     );
   });
 });

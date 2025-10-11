@@ -14,44 +14,41 @@ export class ForgotPasswordService {
     this.cache = cache ?? new ForgotPasswordTokenCache();
   }
   requestPasswordReset = async (email: string) => {
-    try {
-      const token = await this.Hasher.generateToken();
-      const userData: any = await this.AuthRepo.findByEmail(email);
+    const token = await this.Hasher.generateToken();
+    const userData: any = await this.AuthRepo.findByEmail(email);
+    console.log(userData);
 
-      if (!userData) {
-        return {
-          error: "no User account found on this email",
-          status: 404,
-        };
-      }
-      if (!userData.isVerified || !userData.isPrimary) {
-        return {
-          error: "Email is not verified or not primary",
-          status: 409,
-        };
-      }
-      const expirytime = 900;
-
-      await this.cache.createToken(userData.user.id, token, expirytime);
-
-      const req: ForgotPasswordRequest = {
-        to: email,
-        data: {
-          name: userData.user.name,
-          resetLink: `http://localhost:${process.env.PORT}/${token}`,
-          year: `${new Date().getFullYear()}`,
-          expiry: Math.floor(expirytime / 60),
-        },
-        retry: 0,
-      };
-
-      await sendforgotPassword(req);
+    if (!userData) {
       return {
-        message:
-          "If this email exists, password reset instructions have been sent.",
+        error: "no User account found on this email",
+        status: 404,
       };
-    } catch (error: any) {
-      throw new Error(error.message || "Internal server error");
     }
+    if (!userData.isVerified || !userData.isPrimary) {
+      return {
+        error: "Email is not verified or not primary",
+        status: 409,
+      };
+    }
+    const expirytime = 900;
+
+    await this.cache.createToken(userData.user.id, token, expirytime);
+
+    const req: ForgotPasswordRequest = {
+      to: email,
+      data: {
+        name: userData.user.name,
+        resetLink: `http://localhost:${process.env.PORT}/${token}`,
+        year: `${new Date().getFullYear()}`,
+        expiry: Math.floor(expirytime / 60),
+      },
+      retry: 0,
+    };
+
+    await sendforgotPassword(req);
+    return {
+      message:
+        "If this email exists, password reset instructions have been sent.",
+    };
   };
 }

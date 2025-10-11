@@ -28,9 +28,6 @@ CREATE TABLE "User" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Email_userId_key" ON "Email"("userId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Email_email_key" ON "Email"("email");
 
 -- AddForeignKey
