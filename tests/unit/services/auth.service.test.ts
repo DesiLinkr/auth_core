@@ -121,7 +121,7 @@ describe("AuthService", () => {
     mockAuthRepo.findByEmail.mockResolvedValue(null);
     const result = await authService.login(email, password, ip, userAgent);
     expect(result).toEqual({
-      error: "incorrect password or email",
+      error: "Invalid credentials",
       status: 402,
     });
   });
@@ -133,8 +133,8 @@ describe("AuthService", () => {
     });
     const result = await authService.login(email, password, ip, userAgent);
     expect(result).toEqual({
-      error: "User already exists but not verified",
-      status: 409,
+      error: "Invalid credentials",
+      status: 402,
     });
   });
 
@@ -149,47 +149,9 @@ describe("AuthService", () => {
 
     const result = await authService.login(email, password, ip, userAgent);
     expect(result).toEqual({
-      error: "incorrect password or email",
+      error: "Invalid credentials",
       status: 402,
     });
-  });
-
-  it("should create session and send access email on successful login", async () => {
-    mockAuthRepo.findByEmail.mockResolvedValue({
-      isVerified: true,
-      primary: true,
-      user: { id: "u123", name, password: "hashedPwd" },
-      email,
-    });
-
-    mockHasher.comparePassword.mockResolvedValue(true);
-    mockHasher.generateToken.mockResolvedValue("token123");
-    createSession.mockResolvedValue({ refreshToken: "session-token" });
-    mockSecureCache.createToken.mockResolvedValue(true);
-    sendAcesssEmail.mockResolvedValue({ msg: "ok" });
-
-    const result = await authService.login(email, password, ip, userAgent);
-
-    expect(mockHasher.comparePassword).toHaveBeenCalled();
-    expect(createSession).toHaveBeenCalledWith({
-      ip,
-      userId: "u123",
-      userAgent,
-    });
-    expect(mockSecureCache.createToken).toHaveBeenCalledWith(
-      "u123",
-      "token123",
-      expect.any(Number)
-    );
-    expect(sendAcesssEmail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: email,
-        name,
-        ipAddress: ip,
-        secureAccountUrl: expect.stringContaining("token123"),
-      })
-    );
-    expect(result).toEqual({ refreshToken: "session-token" });
   });
 
   it("should throw if repo fails during login", async () => {

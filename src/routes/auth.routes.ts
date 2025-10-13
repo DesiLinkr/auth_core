@@ -21,6 +21,11 @@ AuthRouter.post(
   validate(AuthValidation.login),
   authController.login
 );
+AuthRouter.post(
+  "/verify_reset_token",
+  validate(AuthValidation.verify_reset_token),
+  forgotPasswordController.verifyResetToken
+);
 
 AuthRouter.post(
   "/forgot-password",

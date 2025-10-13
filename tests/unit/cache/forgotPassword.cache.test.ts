@@ -24,8 +24,8 @@ describe("ForgotPasswordTokenCache", () => {
     await cache.createToken(userId, token, 600);
 
     expect(redisClient.set).toHaveBeenCalledWith(
-      "forgot:user-123",
-      token,
+      `forgot:${token}`,
+      userId,
       "EX",
       600
     );

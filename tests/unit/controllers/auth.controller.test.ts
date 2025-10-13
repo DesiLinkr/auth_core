@@ -81,7 +81,7 @@ describe("Auth Controller", () => {
   });
 
   // ------------------------ LOGIN ------------------------
-  it("should return 201 and userData when login succeeds", async () => {
+  it("should return 200 and userData when login succeeds", async () => {
     mockAuthService.login.mockResolvedValue(mockUserData);
     await authController.login(reqLogin, res);
 
@@ -91,7 +91,7 @@ describe("Auth Controller", () => {
       "127.0.0.1",
       "Mozilla/5.0"
     );
-    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(mockUserData);
   });
 
@@ -106,13 +106,13 @@ describe("Auth Controller", () => {
   });
 
   it("should return the error status if login returns an error object", async () => {
-    const errorObj = { error: "incorrect password", status: 402 };
+    const errorObj = { error: "Invalid credentials", status: 402 };
     mockAuthService.login.mockResolvedValue(errorObj);
 
     await authController.login(reqLogin, res);
 
     expect(res.status).toHaveBeenCalledWith(402);
-    expect(res.json).toHaveBeenCalledWith({ message: "incorrect password" });
+    expect(res.json).toHaveBeenCalledWith({ message: "Invalid credentials" });
   });
 
   it("should return 500 if AuthService.login throws", async () => {
