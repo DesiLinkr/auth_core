@@ -1,12 +1,33 @@
 import { Request, Response } from "express";
 import { ForgotPasswordService } from "../services/forgotPassword.service";
+import { ForgotPasswordTokenCache } from "../cache/forgotPassword.cache";
+import { valid } from "joi";
 
 class ForgotPasswordController {
   private forgotPasswordService: ForgotPasswordService;
+  private readonly cache: ForgotPasswordTokenCache;
 
   constructor() {
     this.forgotPasswordService = new ForgotPasswordService();
+    this.cache = new ForgotPasswordTokenCache();
   }
+
+  public verifyResetToken = async (req: Request, res: Response) => {
+    try {
+      const { token } = req.body;
+      const isvaildToken = await this.cache.isvaildToken(token);
+
+      if (isvaildToken) {
+        res.status(200).json({
+          success: isvaildToken,
+        });
+      } else {
+        res.status(400).json({ message: "invaild Token" });
+      }
+    } catch (error) {
+      res.status(500).json("Internal server error");
+    }
+  };
 
   public sendPasswordResetToken = async (
     req: Request,

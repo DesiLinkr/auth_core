@@ -8,6 +8,11 @@ export class ForgotPasswordTokenCache extends AbstractTokenCache {
     token: string,
     TTL_SECONDS: number
   ): Promise<void> => {
-    await this.setToken(identifier, token, TTL_SECONDS);
+    await this.setToken(token, identifier, TTL_SECONDS);
+  };
+
+  public isvaildToken = async (forgotToken: string) => {
+    const token = await this.getToken(forgotToken);
+    return token ? true : false;
   };
 }

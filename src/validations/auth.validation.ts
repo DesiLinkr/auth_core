@@ -15,4 +15,7 @@ export class AuthValidation {
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
   });
+  static verify_reset_token = Joi.object({
+    token: Joi.string().required(),
+  });
 }

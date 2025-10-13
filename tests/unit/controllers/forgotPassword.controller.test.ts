@@ -1,118 +1,130 @@
-// ---------------------- MOCKS ----------------------
-jest.mock("../../../src/redis/client", () => ({
-  redisClient: {
-    set: jest.fn(),
-    get: jest.fn(),
-    del: jest.fn(),
-    on: jest.fn(),
-  },
-}));
-
-// Mock gRPC utilities
-jest.mock("../../../src/utils/grpc.util", () => ({
-  sendforgotPassword: jest.fn(),
-  sendAcesssEmail: jest.fn(),
-  sendVerificationEmail: jest.fn(),
-  createSession: jest.fn(),
-}));
-
+import { Request, Response } from "express";
+import ForgotPasswordController from "../../../src/controllers/forgotPassword.controller";
 import { ForgotPasswordService } from "../../../src/services/forgotPassword.service";
 import { ForgotPasswordTokenCache } from "../../../src/cache/forgotPassword.cache";
-import { AuthRepository } from "../../../src/repositories/auth.repository";
-import { Hasher } from "../../../src/utils/hash.util";
 
-import * as grpcUtil from "../../../src/utils/grpc.util";
-const mockedGrpc = grpcUtil as jest.Mocked<typeof grpcUtil>;
-const { sendforgotPassword } = mockedGrpc;
+// Auto-mock classes
+jest.mock("../../../src/services/forgotPassword.service");
+jest.mock("../../../src/cache/forgotPassword.cache");
 
-// ---------------------- TEST SUITE ----------------------
-describe("ForgotPassword controller", () => {
-  const mockHasher = {
-    generateToken: jest.fn(),
-  };
+describe("ForgotPasswordController", () => {
+  let controller: ForgotPasswordController;
+  let mockReq: Partial<Request>;
+  let mockRes: Partial<Response>;
 
-  const mockAuthRepo = {
-    findByEmail: jest.fn(),
-  };
-
-  const mockCache = {
-    createToken: jest.fn(),
-  };
-
-  const service = new ForgotPasswordService(
-    mockAuthRepo as unknown as AuthRepository,
-    mockCache as unknown as ForgotPasswordTokenCache
-  );
-
-  // Override private hasher with mock
-  // @ts-ignore
-  service.Hasher = mockHasher as unknown as Hasher;
-
-  const email = "harsh@example.com";
+  // We'll reassign these to our manually mocked methods
+  let mockService: any;
+  let mockCache: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Prevent real gRPC calls
-    sendforgotPassword.mockResolvedValue({ msg: "ok" });
+    // manually create mocks for class methods
+    mockService = {
+      requestPasswordReset: jest.fn(),
+    };
+
+    mockCache = {
+      isvaildToken: jest.fn(),
+    };
+
+    // create controller and inject mocks
+    controller = new ForgotPasswordController();
+    // @ts-ignore private fields for testing
+    controller.forgotPasswordService = mockService;
+    // @ts-ignore private fields for testing
+    controller.cache = mockCache;
+
+    mockReq = { body: {} };
+    mockRes = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
   });
 
-  it("should return 400 if user not found", async () => {
-    (mockAuthRepo.findByEmail as jest.Mock).mockResolvedValue(null);
+  // -------------------------------------------------------------------------
+  // ✅ verifyResetToken
+  // -------------------------------------------------------------------------
+  it("should return 200 with success true if reset token is valid", async () => {
+    mockReq.body = { token: "valid-token" };
+    mockCache.isvaildToken.mockResolvedValue(true);
 
-    const result = await service.requestPasswordReset(email);
+    await controller.verifyResetToken(mockReq as Request, mockRes as Response);
 
-    expect(result).toEqual({
-      error: "no User account found on this email",
-      status: 404,
-    });
+    expect(mockCache.isvaildToken).toHaveBeenCalledWith("valid-token");
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledWith({ success: true });
   });
 
-  it("should return 409 if user is not verified", async () => {
-    (mockAuthRepo.findByEmail as jest.Mock).mockResolvedValue({
-      emails: [{ isVerified: false, isPrimary: true }],
-    });
+  it("should  send 400 response if reset token is invalid", async () => {
+    mockReq.body = { token: "invalid-token" };
+    mockCache.isvaildToken.mockResolvedValue(false);
 
-    const result = await service.requestPasswordReset(email);
+    await controller.verifyResetToken(mockReq as Request, mockRes as Response);
 
-    expect(result).toEqual({
-      error: "Email is not verified or not primary",
-      status: 409,
-    });
+    expect(mockCache.isvaildToken).toHaveBeenCalledWith("invalid-token");
+    expect(mockRes.status).toHaveBeenCalledWith(400);
   });
 
-  it("should return 409 if email is not primary", async () => {
-    (mockAuthRepo.findByEmail as jest.Mock).mockResolvedValue({
-      emails: [{ isVerified: true, isPrimary: false }],
-    });
+  it("should return 500 if an exception occurs in verifyResetToken", async () => {
+    mockReq.body = { token: "any-token" };
+    mockCache.isvaildToken.mockRejectedValue(new Error("Redis crash"));
 
-    const result = await service.requestPasswordReset(email);
+    await controller.verifyResetToken(mockReq as Request, mockRes as Response);
 
-    expect(result).toEqual({
-      error: "Email is not verified or not primary",
-      status: 409,
-    });
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith("Internal server error");
   });
 
-  it("should return success and call createToken when user is valid", async () => {
-    (mockHasher.generateToken as jest.Mock).mockResolvedValue("abc123");
-    (mockAuthRepo.findByEmail as jest.Mock).mockResolvedValue({
-      id: "email1",
-      email: "harsh@example.com",
-      isPrimary: true,
-      isVerified: true,
-      userId: "user1",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      user: { name: "Harsh", id: "user1" },
-    });
+  // -------------------------------------------------------------------------
+  // ✅ sendPasswordResetToken
+  // -------------------------------------------------------------------------
+  it("should return 200 and result when ForgotPasswordService succeeds", async () => {
+    mockReq.body = { email: "user@example.com" };
+    const mockResult = { message: "Reset email sent" };
+    mockService.requestPasswordReset.mockResolvedValue(mockResult);
 
-    const result = await service.requestPasswordReset(email);
+    await controller.sendPasswordResetToken(
+      mockReq as Request,
+      mockRes as Response
+    );
 
-    expect(mockCache.createToken).toHaveBeenCalledWith("user1", "abc123", 900);
-    expect(result).toEqual({
-      message:
-        "If this email exists, password reset instructions have been sent.",
-    });
+    expect(mockService.requestPasswordReset).toHaveBeenCalledWith(
+      "user@example.com"
+    );
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledWith(mockResult);
+  });
+
+  it("should return specific error message when service returns { error }", async () => {
+    mockReq.body = { email: "notfound@example.com" };
+    const errorResult = { error: "User not found", status: 404 };
+    mockService.requestPasswordReset.mockResolvedValue(errorResult);
+
+    await controller.sendPasswordResetToken(
+      mockReq as Request,
+      mockRes as Response
+    );
+
+    expect(mockService.requestPasswordReset).toHaveBeenCalledWith(
+      "notfound@example.com"
+    );
+    expect(mockRes.status).toHaveBeenCalledWith(404);
+    expect(mockRes.json).toHaveBeenCalledWith({ message: "User not found" });
+  });
+
+  it("should return 500 if an exception occurs in sendPasswordResetToken", async () => {
+    mockReq.body = { email: "error@example.com" };
+    mockService.requestPasswordReset.mockRejectedValue(
+      new Error("Unexpected failure")
+    );
+
+    await controller.sendPasswordResetToken(
+      mockReq as Request,
+      mockRes as Response
+    );
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith("Internal server error");
   });
 });
