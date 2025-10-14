@@ -23,7 +23,7 @@ export abstract class AbstractTokenCache {
     return this.redisClient.get(this.getKey(id));
   };
 
-  protected deleteToken = (id: string): Promise<number> => {
+  protected removeToken = (id: string): Promise<number> => {
     return this.redisClient.del(this.getKey(id));
   };
 }

@@ -15,4 +15,12 @@ export class ForgotPasswordTokenCache extends AbstractTokenCache {
     const token = await this.getToken(forgotToken);
     return token ? true : false;
   };
+
+  public deleteToken = async (forgotToken: string) => {
+    await this.removeToken(forgotToken);
+  };
+  public getUserIdfromToken = async (forgotToken: string) => {
+    const userId = await this.getToken(forgotToken);
+    return userId;
+  };
 }
