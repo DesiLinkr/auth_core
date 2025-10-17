@@ -34,13 +34,12 @@ class ForgotPasswordController {
       const { token } = req.body;
       const isvaildToken = await this.cache.isvaildToken(token);
 
-      if (isvaildToken) {
-        res.status(200).json({
-          success: isvaildToken,
-        });
-      } else {
+      if (!isvaildToken) {
         res.status(400).json({ message: "invaild Token" });
       }
+      res.status(200).json({
+        success: isvaildToken,
+      });
     } catch (error) {
       res.status(500).json("Internal server error");
     }
