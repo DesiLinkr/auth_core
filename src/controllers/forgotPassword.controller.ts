@@ -12,6 +12,23 @@ class ForgotPasswordController {
     this.cache = new ForgotPasswordTokenCache();
   }
 
+  public resetPassword = async (req: Request, res: Response) => {
+    try {
+      const { token, password } = req.body;
+      const result: any = await this.forgotPasswordService.resetPassword(
+        token,
+        password
+      );
+
+      if ("error" in result) {
+        res.status(result.status).json({ message: result.error });
+        return;
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json("Internal server error");
+    }
+  };
   public verifyResetToken = async (req: Request, res: Response) => {
     try {
       const { token } = req.body;

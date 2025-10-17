@@ -14,13 +14,13 @@ import { ForgotPasswordService } from "../../../src/services/forgotPassword.serv
 import { Hasher } from "../../../src/utils/hash.util";
 
 describe("", () => {
-  const mockAuthRepo = {
-    findByEmail: jest.fn(),
-  };
-
   const mockCache = {
     createToken: jest.fn(),
+    getUserIdfromToken: jest.fn(),
+    deleteToken: jest.fn(),
   };
+  const mockAuthRepo = { findByEmail: jest.fn(), Password: jest.fn() };
+
   const service = new ForgotPasswordService(
     mockAuthRepo as unknown as AuthRepository,
     mockCache as unknown as ForgotPasswordTokenCache
@@ -28,8 +28,15 @@ describe("", () => {
 
   const mockHasher = {
     generateToken: jest.fn().mockResolvedValue("mock-token"),
+    Password: jest.fn(),
   };
-  (service as any).Hasher = mockHasher as unknown as Hasher;
+
+  const mockSettingsRepo = { setPassword: jest.fn() };
+  beforeAll(() => {
+    (service as any).hasher = mockHasher as unknown as Hasher;
+    (service as any).settingsRepo = mockSettingsRepo;
+    (service as any).Hasher = mockHasher as unknown as Hasher;
+  });
   it("Should generate a token and store it in Redis for valid verified & primary user", async () => {
     const mockUserData = {
       id: "user1",
@@ -129,5 +136,48 @@ describe("", () => {
       status: 409,
     });
     expect(mockAuthRepo.findByEmail).toHaveBeenCalledWith("user@example.com");
+  });
+
+  it("should reset password successfully when token is valid", async () => {
+    mockCache.getUserIdfromToken.mockResolvedValue("user1");
+    mockHasher.Password.mockResolvedValue("hashedPassword");
+
+    const result = await service.resetPassword("validToken", "newPass123");
+
+    expect(mockCache.getUserIdfromToken).toHaveBeenCalledWith("validToken");
+    expect(mockHasher.Password).toHaveBeenCalledWith("newPass123");
+    expect(mockSettingsRepo.setPassword).toHaveBeenCalledWith(
+      "user1",
+      "hashedPassword"
+    );
+    expect(mockCache.deleteToken).toHaveBeenCalledWith("validToken");
+    expect(result).toEqual({ message: "password changed" });
+  });
+
+  it("should return error if token is invalid", async () => {
+    mockCache.getUserIdfromToken.mockResolvedValue(null);
+
+    const result = await service.resetPassword("invalidToken", "newPass123");
+
+    expect(result).toEqual({ error: "invaild Token", status: 400 });
+  });
+
+  it("should throw if hasher fails", async () => {
+    mockCache.getUserIdfromToken.mockResolvedValue("user1");
+    mockHasher.Password.mockRejectedValue(new Error("Hash failed"));
+
+    await expect(
+      service.resetPassword("validToken", "newPass123")
+    ).rejects.toThrow("Hash failed");
+  });
+
+  it("should throw if settingsRepo.setPassword fails", async () => {
+    mockCache.getUserIdfromToken.mockResolvedValue("user1");
+    mockHasher.Password.mockResolvedValue("hashedPassword");
+    mockSettingsRepo.setPassword.mockRejectedValue(new Error("DB error"));
+
+    await expect(
+      service.resetPassword("validToken", "newPass123")
+    ).rejects.toThrow("DB error");
   });
 });

@@ -23,7 +23,7 @@ AuthRouter.post(
 );
 AuthRouter.post(
   "/verify_reset_token",
-  validate(AuthValidation.verify_reset_token),
+  validate(AuthValidation.verifyResetToken),
   forgotPasswordController.verifyResetToken
 );
 
@@ -31,6 +31,11 @@ AuthRouter.post(
   "/forgot-password",
   validate(AuthValidation.forgotPassword),
   forgotPasswordController.sendPasswordResetToken
+);
+AuthRouter.post(
+  "/reset-password",
+  validate(AuthValidation.resetPassword),
+  forgotPasswordController.resetPassword
 );
 
 export default AuthRouter;

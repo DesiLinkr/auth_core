@@ -12,27 +12,25 @@ describe("ForgotPasswordController", () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
 
-  // We'll reassign these to our manually mocked methods
   let mockService: any;
   let mockCache: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // manually create mocks for class methods
     mockService = {
       requestPasswordReset: jest.fn(),
+      resetPassword: jest.fn(),
     };
 
     mockCache = {
       isvaildToken: jest.fn(),
     };
 
-    // create controller and inject mocks
     controller = new ForgotPasswordController();
-    // @ts-ignore private fields for testing
+    // @ts-ignore
     controller.forgotPasswordService = mockService;
-    // @ts-ignore private fields for testing
+    // @ts-ignore
     controller.cache = mockCache;
 
     mockReq = { body: {} };
@@ -56,7 +54,7 @@ describe("ForgotPasswordController", () => {
     expect(mockRes.json).toHaveBeenCalledWith({ success: true });
   });
 
-  it("should  send 400 response if reset token is invalid", async () => {
+  it("should send 400 response if reset token is invalid", async () => {
     mockReq.body = { token: "invalid-token" };
     mockCache.isvaildToken.mockResolvedValue(false);
 
@@ -123,6 +121,53 @@ describe("ForgotPasswordController", () => {
       mockReq as Request,
       mockRes as Response
     );
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith("Internal server error");
+  });
+
+  // -------------------------------------------------------------------------
+  // ✅ resetPassword
+  // -------------------------------------------------------------------------
+  it("should return 200 when password reset succeeds", async () => {
+    mockReq.body = { token: "validToken123", password: "NewPass123" };
+    const mockResult = { message: "Password updated successfully" };
+    mockService.resetPassword.mockResolvedValue(mockResult);
+
+    await controller.resetPassword(mockReq as Request, mockRes as Response);
+
+    expect(mockService.resetPassword).toHaveBeenCalledWith(
+      "validToken123",
+      "NewPass123"
+    );
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledWith(mockResult);
+  });
+
+  it("should return error message when service returns { error }", async () => {
+    mockReq.body = { token: "expiredToken", password: "NewPass123" };
+    const errorResult = { error: "Invalid or expired token", status: 400 };
+    mockService.resetPassword.mockResolvedValue(errorResult);
+
+    await controller.resetPassword(mockReq as Request, mockRes as Response);
+
+    expect(mockService.resetPassword).toHaveBeenCalledWith(
+      "expiredToken",
+      "NewPass123"
+    );
+    expect(mockRes.status).toHaveBeenCalledWith(400);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      message: "Invalid or expired token",
+    });
+  });
+
+  it("should return 500 if an exception occurs in resetPassword", async () => {
+    mockReq.body = { token: "anyToken", password: "AnyPass" };
+    mockService.resetPassword.mockRejectedValue(
+      new Error("Unexpected internal error")
+    );
+
+    await controller.resetPassword(mockReq as Request, mockRes as Response);
 
     expect(mockRes.status).toHaveBeenCalledWith(500);
     expect(mockRes.json).toHaveBeenCalledWith("Internal server error");

@@ -1,20 +1,45 @@
 import { ForgotPasswordTokenCache } from "../cache/forgotPassword.cache";
 import { ForgotPasswordRequest } from "../grpc/generated/email";
 import { AuthRepository } from "../repositories/auth.repository";
+import { settingsRepository } from "../repositories/settings.repository";
 import { sendforgotPassword } from "../utils/grpc.util";
 import { Hasher } from "../utils/hash.util";
 
 export class ForgotPasswordService {
-  private readonly Hasher: Hasher;
+  private readonly hasher: Hasher;
   private readonly AuthRepo: AuthRepository;
+  private readonly settingsRepo: settingsRepository;
   private readonly cache: ForgotPasswordTokenCache;
-  constructor(AuthRepo?: AuthRepository, cache?: ForgotPasswordTokenCache) {
-    this.Hasher = new Hasher();
+  constructor(
+    AuthRepo?: AuthRepository,
+    cache?: ForgotPasswordTokenCache,
+    settingsRepo?: settingsRepository
+  ) {
+    this.hasher = new Hasher();
     this.AuthRepo = AuthRepo ?? new AuthRepository();
     this.cache = cache ?? new ForgotPasswordTokenCache();
+    this.settingsRepo = settingsRepo ?? new settingsRepository();
   }
+  resetPassword = async (token: string, password: string) => {
+    const UserId = await this.cache.getUserIdfromToken(token);
+
+    if (!UserId) {
+      return {
+        error: "invaild Token",
+        status: 400,
+      };
+    }
+    const hashedPassword = await this.hasher.Password(password);
+
+    await this.settingsRepo.setPassword(UserId, hashedPassword);
+
+    await this.cache.deleteToken(token);
+    return {
+      message: "password changed",
+    };
+  };
   requestPasswordReset = async (email: string) => {
-    const token = await this.Hasher.generateToken();
+    const token = await this.hasher.generateToken();
     const userData: any = await this.AuthRepo.findByEmail(email);
     console.log(userData);
 
