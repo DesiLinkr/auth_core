@@ -38,4 +38,10 @@ AuthRouter.post(
   forgotPasswordController.resetPassword
 );
 
+AuthRouter.post(
+  "/secure/verify",
+  validate(AuthValidation.secureVerifyToken),
+  authController.secureVerifyToken
+);
+
 export default AuthRouter;

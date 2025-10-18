@@ -1,12 +1,30 @@
 import { Request, Response } from "express";
 import { AuthService } from "../services/auth.service";
+import { SecureTokenCache } from "../cache/secure.cache";
 
 class AuthController {
   private AuthService;
-
+  public cache: SecureTokenCache;
   constructor(authService?: AuthService) {
     this.AuthService = authService ?? new AuthService();
+    this.cache = new SecureTokenCache();
   }
+
+  public secureVerifyToken = async (req: Request, res: Response) => {
+    try {
+      const { token } = req.body;
+      const isvaildToken = await this.cache.isvaildToken(token);
+
+      if (!isvaildToken) {
+        res.status(400).json({ message: "invaild Token" });
+      }
+      res.status(200).json({
+        success: isvaildToken,
+      });
+    } catch (error) {
+      res.status(500).json("Internal server error");
+    }
+  };
   public register = async (req: Request, res: Response): Promise<void> => {
     try {
       const { email, name, password } = req.body;

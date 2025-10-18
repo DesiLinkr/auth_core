@@ -34,4 +34,8 @@ export class AuthValidation {
       .pattern(/[^a-zA-Z0-9]/)
       .required(),
   });
+
+  static secureVerifyToken = Joi.object({
+    token: Joi.string().length(64).required(),
+  });
 }

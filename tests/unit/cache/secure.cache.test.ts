@@ -24,8 +24,8 @@ describe("secureTokenCache", () => {
     await cache.createToken(userId, token, 600);
 
     expect(redisClient.set).toHaveBeenCalledWith(
-      "secure:user-123",
-      token,
+      `secure:${token}`,
+      "user-123",
       "EX",
       600
     );
