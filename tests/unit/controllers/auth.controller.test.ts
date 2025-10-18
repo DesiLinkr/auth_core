@@ -2,6 +2,15 @@ import { Request, Response } from "express";
 import AuthController from "../../../src/controllers/auth.controller";
 
 describe("Auth Controller", () => {
+  let mockCache: any;
+
+  beforeEach(() => {
+    mockCache = {
+      isvaildToken: jest.fn(),
+    };
+
+    (authController as any).cache = mockCache;
+  });
   const mockUserData = {
     id: "user1",
     name: "Harsh",
@@ -50,6 +59,40 @@ describe("Auth Controller", () => {
     clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
   } as any as Request;
 
+  it("should return 200 with success true if secure token is valid", async () => {
+    mockCache.isvaildToken.mockResolvedValue(true);
+
+    await authController.secureVerifyToken(
+      { body: { token: "valid-token" } } as any,
+      res
+    );
+
+    expect(mockCache.isvaildToken).toHaveBeenCalledWith("valid-token");
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  it("should send 400 response if secure token is invalid", async () => {
+    await authController.secureVerifyToken(
+      { body: { token: "invalid-token" } } as any,
+      res
+    );
+
+    expect(mockCache.isvaildToken).toHaveBeenCalledWith("invalid-token");
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it("should return 500 if an exception occurs in verifysecureToken", async () => {
+    mockCache.isvaildToken.mockRejectedValue(new Error("Redis crash"));
+
+    await authController.secureVerifyToken(
+      { body: { token: "any-token" } } as any,
+      res
+    );
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith("Internal server error");
+  });
   // ------------------------ REGISTER ------------------------
   it("should register a user and return 201 with user data", async () => {
     mockAuthService.register.mockResolvedValue(mockUserData);
