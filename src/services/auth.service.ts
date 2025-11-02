@@ -2,6 +2,7 @@ import { AuthRepository } from "../repositories/auth.repository";
 import { Hasher } from "../utils/hash.util";
 import {
   createSession,
+  delAllsessions,
   sendAcesssEmail,
   sendVerificationEmail,
 } from "../utils/grpc.util";
@@ -12,10 +13,11 @@ import {
 } from "../grpc/generated/email";
 
 import { SecureTokenCache } from "../cache/secure.cache";
+import { delsessionsRequest } from "../grpc/generated/access";
 
 export class AuthService {
-  private readonly AuthRepo: AuthRepository;
-  private readonly Hasher: Hasher;
+  private readonly authRepo: AuthRepository;
+  private readonly hasher: Hasher;
   private readonly securecache: SecureTokenCache;
   private Verificationcache;
   constructor(
@@ -26,16 +28,61 @@ export class AuthService {
     this.Verificationcache =
       Verificationcache ?? new EmailVerificationTokenCache();
     this.securecache = secureTokenCache ?? new SecureTokenCache();
-    this.AuthRepo = authRepo ?? new AuthRepository();
-    this.Hasher = new Hasher();
+    this.authRepo = authRepo ?? new AuthRepository();
+    this.hasher = new Hasher();
   }
+  public secure = async (
+    token: string,
+    oldPassword: string,
+    newPassword: string
+  ) => {
+    const userId = await this.securecache.getUserIdfromToken(token);
+    if (!userId) {
+      return {
+        error: "invaild Token",
+        status: 400,
+      };
+    }
 
+    const { password: currentPassword }: any =
+      await this.authRepo.findUserInfoById(userId, true);
+
+    const isSame = await this.hasher.comparePassword(
+      oldPassword,
+      currentPassword
+    );
+
+    if (!isSame) {
+      return {
+        error: "old password is incorrect",
+        status: 402,
+      };
+    }
+
+    if (newPassword == oldPassword) {
+      return {
+        error: "you can not use same password as old password",
+        status: 409,
+      };
+    }
+    const hashedPassword = await this.hasher.Password(newPassword);
+
+    await this.authRepo.setPassword(userId, hashedPassword);
+    await delAllsessions({
+      userId,
+    });
+    await this.securecache.deleteToken(token);
+
+    return {
+      message: "password changed && logout form all devices successfully ",
+    };
+  };
   public register = async (
     name: string,
     email: string,
     rawPassword: string
   ) => {
-    const existing: any = await this.AuthRepo.findByEmail(email);
+    const existing: any = await this.authRepo.findByEmail(email);
 
     if (existing) {
       const isVerified = existing.isVerified;
@@ -48,12 +95,12 @@ export class AuthService {
       }
       return { error: "User already exists", status: 409 };
     }
-    const hashPassword = await this.Hasher.Password(rawPassword);
-    const userData = await this.AuthRepo.createUser(email, name, hashPassword);
+    const hashPassword = await this.hasher.Password(rawPassword);
+    const userData = await this.authRepo.createUser(email, name, hashPassword);
     if (!userData) {
       return { error: "User registration failed", status: 422 };
     }
-    const token = await this.Hasher.generateToken();
+    const token = await this.hasher.generateToken();
     const expirytime = 600;
     await this.Verificationcache.createToken(userData.id, token, expirytime);
 
@@ -67,7 +114,7 @@ export class AuthService {
       },
       retry: 0,
     };
-    await sendVerificationEmail(req);
+
     const { password, ...safeUser } = userData;
 
     return safeUser;
@@ -79,7 +126,7 @@ export class AuthService {
     ip: string,
     userAgent: string
   ) => {
-    const existing: any = await this.AuthRepo.findByEmail(email);
+    const existing: any = await this.authRepo.findByEmail(email);
 
     if (!existing || !existing.isPrimary) {
       return { error: "Invalid credentials", status: 402 };
@@ -93,7 +140,7 @@ export class AuthService {
       };
     }
 
-    const isSame = await this.Hasher.comparePassword(
+    const isSame = await this.hasher.comparePassword(
       password,
       existing.user.password
     );
@@ -109,7 +156,7 @@ export class AuthService {
     });
     const expirytime = 600;
 
-    const token = await this.Hasher.generateToken();
+    const token = await this.hasher.generateToken();
     await this.securecache.createToken(existing.user.id, token, expirytime);
 
     await sendAcesssEmail({

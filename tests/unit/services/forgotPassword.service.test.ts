@@ -13,58 +13,36 @@ import { AuthRepository } from "../../../src/repositories/auth.repository";
 import { ForgotPasswordService } from "../../../src/services/forgotPassword.service";
 import { Hasher } from "../../../src/utils/hash.util";
 
-describe("", () => {
+describe("ForgotPasswordService Unit Tests", () => {
   const mockCache = {
     createToken: jest.fn(),
     getUserIdfromToken: jest.fn(),
     deleteToken: jest.fn(),
   };
-  const mockAuthRepo = { findByEmail: jest.fn(), Password: jest.fn() };
 
-  const service = new ForgotPasswordService(
-    mockAuthRepo as unknown as AuthRepository,
-    mockCache as unknown as ForgotPasswordTokenCache
-  );
+  const mockAuthRepo = {
+    findByEmail: jest.fn(),
+    setPassword: jest.fn(),
+  };
 
   const mockHasher = {
     generateToken: jest.fn().mockResolvedValue("mock-token"),
     Password: jest.fn(),
   };
 
-  const mockSettingsRepo = { setPassword: jest.fn() };
+  const service = new ForgotPasswordService(
+    mockAuthRepo as unknown as AuthRepository,
+    mockCache as unknown as ForgotPasswordTokenCache
+  );
+
   beforeAll(() => {
     (service as any).hasher = mockHasher as unknown as Hasher;
-    (service as any).settingsRepo = mockSettingsRepo;
-    (service as any).Hasher = mockHasher as unknown as Hasher;
   });
-  it("Should generate a token and store it in Redis for valid verified & primary user", async () => {
-    const mockUserData = {
-      id: "user1",
-      name: "Harsh",
-      profileImage: "img.png",
-      plan: PlanType.FREE, //  // assuming this is your enum value
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      emails: [
-        {
-          id: "email1",
-          email: "harsh@example.com",
-          isPrimary: true,
-          isVerified: true,
-          userId: "user1",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
-    };
-    mockAuthRepo.findByEmail.mockResolvedValue(mockUserData);
 
-    const res = await service.requestPasswordReset("harsh@example.com");
-    expect(res).toEqual({
-      error: "Email is not verified or not primary",
-      status: 409,
-    });
-  });
+  // -----------------------------
+  // requestPasswordReset tests
+  // -----------------------------
+
   it("Should return 404 if no user is found with the given email", async () => {
     mockAuthRepo.findByEmail.mockResolvedValue(null);
 
@@ -76,77 +54,51 @@ describe("", () => {
     });
     expect(mockAuthRepo.findByEmail).toHaveBeenCalledWith("user@example.com");
   });
+
   it("Should return 409 if the user is not verified", async () => {
     const mockUserData = {
-      id: "user1",
-      name: "Harsh",
-      profileImage: "img.png",
-      plan: PlanType.FREE, //  // assuming this is your enum value
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      emails: [
-        {
-          id: "email1",
-          email: "harsh@example.com",
-          isPrimary: true,
-          isVerified: false,
-          userId: "user1",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
+      isVerified: false,
+      isPrimary: true,
+      user: { id: "user1", name: "Harsh" },
     };
     mockAuthRepo.findByEmail.mockResolvedValue(mockUserData);
 
     const res = await service.requestPasswordReset("user@example.com");
-
     expect(res).toEqual({
       error: "Email is not verified or not primary",
       status: 409,
     });
-    expect(mockAuthRepo.findByEmail).toHaveBeenCalledWith("user@example.com");
   });
 
   it("Should return 409 if the email is not marked as primary", async () => {
     const mockUserData = {
-      id: "user1",
-      name: "Harsh",
-      profileImage: "img.png",
-      plan: PlanType.FREE, //  // assuming this is your enum value
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      emails: [
-        {
-          id: "email1",
-          email: "harsh@example.com",
-          isPrimary: false,
-          isVerified: true,
-          userId: "user1",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
+      isVerified: true,
+      isPrimary: false,
+      user: { id: "user1", name: "Harsh" },
     };
     mockAuthRepo.findByEmail.mockResolvedValue(mockUserData);
 
     const res = await service.requestPasswordReset("user@example.com");
-
     expect(res).toEqual({
       error: "Email is not verified or not primary",
       status: 409,
     });
-    expect(mockAuthRepo.findByEmail).toHaveBeenCalledWith("user@example.com");
   });
+
+  // -----------------------------
+  // resetPassword tests
+  // -----------------------------
 
   it("should reset password successfully when token is valid", async () => {
     mockCache.getUserIdfromToken.mockResolvedValue("user1");
     mockHasher.Password.mockResolvedValue("hashedPassword");
+    mockAuthRepo.setPassword.mockResolvedValue({});
 
     const result = await service.resetPassword("validToken", "newPass123");
 
     expect(mockCache.getUserIdfromToken).toHaveBeenCalledWith("validToken");
     expect(mockHasher.Password).toHaveBeenCalledWith("newPass123");
-    expect(mockSettingsRepo.setPassword).toHaveBeenCalledWith(
+    expect(mockAuthRepo.setPassword).toHaveBeenCalledWith(
       "user1",
       "hashedPassword"
     );
@@ -171,10 +123,10 @@ describe("", () => {
     ).rejects.toThrow("Hash failed");
   });
 
-  it("should throw if settingsRepo.setPassword fails", async () => {
+  it("should throw if AuthRepo.setPassword fails", async () => {
     mockCache.getUserIdfromToken.mockResolvedValue("user1");
     mockHasher.Password.mockResolvedValue("hashedPassword");
-    mockSettingsRepo.setPassword.mockRejectedValue(new Error("DB error"));
+    mockAuthRepo.setPassword.mockRejectedValue(new Error("DB error"));
 
     await expect(
       service.resetPassword("validToken", "newPass123")

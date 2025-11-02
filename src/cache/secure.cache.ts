@@ -14,4 +14,12 @@ export class SecureTokenCache extends AbstractTokenCache {
     const token = await this.getToken(secureToken);
     return token ? true : false;
   };
+  public getUserIdfromToken = async (secureToken: string) => {
+    const userId = await this.getToken(secureToken);
+    return userId;
+  };
+
+  public deleteToken = async (secureToken: string) => {
+    await this.removeToken(secureToken);
+  };
 }

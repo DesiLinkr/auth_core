@@ -6,11 +6,27 @@ export class AuthRepository {
   constructor(prisma?: PrismaClient) {
     this.prisma = prisma ?? new PrismaClient(); // fallback to real if none provided
   }
-  public findUserInfoById = async (id: string) => {
+
+  public setPassword = (userId: string, newPassword: string) => {
+    return this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+
+      data: {
+        password: newPassword,
+      },
+    });
+  };
+
+  public findUserInfoById = async (
+    id: string,
+    withPassword: boolean = false
+  ) => {
     return await this.prisma.user.findUnique({
       where: { id },
       omit: {
-        password: true,
+        password: !withPassword,
       },
     });
   };
