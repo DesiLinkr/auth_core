@@ -9,7 +9,27 @@ class AuthController {
     this.AuthService = authService ?? new AuthService();
     this.cache = new SecureTokenCache();
   }
+  public secureAccount = async (req: Request, res: Response) => {
+    try {
+      const { token, oldPassword, newPassword } = req.body;
+      const result: any = await this.AuthService.secure(
+        token,
+        oldPassword,
+        newPassword
+      );
 
+      if ("error" in result) {
+        console.log(result);
+
+        res.status(result.status).json({ message: result.error });
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      console.log(error);
+
+      res.status(500).json("Internal server error");
+    }
+  };
   public secureVerifyToken = async (req: Request, res: Response) => {
     try {
       const { token } = req.body;

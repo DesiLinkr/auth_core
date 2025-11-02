@@ -35,6 +35,7 @@ describe("Auth Controller", () => {
   const mockAuthService = {
     register: jest.fn(),
     login: jest.fn(),
+    secure: jest.fn(),
   };
 
   const authController = new AuthController(mockAuthService as any);
@@ -165,5 +166,71 @@ describe("Auth Controller", () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith("Something went wrong");
+  });
+
+  // ------------------------ SECURE ACCOUNT ------------------------
+  it("should return 201 and result when secureAccount succeeds", async () => {
+    const mockResult = { message: "Password updated successfully" };
+    mockAuthService.secure = jest.fn().mockResolvedValue(mockResult);
+
+    const reqSecure = {
+      body: {
+        token: "valid-token",
+        oldPassword: "oldPass123",
+        newPassword: "newPass456",
+      },
+    } as any as Request;
+
+    await authController.secureAccount(reqSecure, res);
+
+    expect(mockAuthService.secure).toHaveBeenCalledWith(
+      "valid-token",
+      "oldPass123",
+      "newPass456"
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(mockResult);
+  });
+
+  it("should return error status and message when AuthService.secure returns error", async () => {
+    const errorResponse = { error: "Invalid token", status: 403 };
+    mockAuthService.secure = jest.fn().mockResolvedValue(errorResponse);
+
+    const reqSecure = {
+      body: {
+        token: "invalid-token",
+        oldPassword: "oldPass",
+        newPassword: "newPass",
+      },
+    } as any as Request;
+
+    await authController.secureAccount(reqSecure, res);
+
+    expect(mockAuthService.secure).toHaveBeenCalledWith(
+      "invalid-token",
+      "oldPass",
+      "newPass"
+    );
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ message: "Invalid token" });
+  });
+
+  it("should return 500 if AuthService.secure throws an error", async () => {
+    mockAuthService.secure = jest
+      .fn()
+      .mockRejectedValue(new Error("Unexpected failure"));
+
+    const reqSecure = {
+      body: {
+        token: "any-token",
+        oldPassword: "pass1",
+        newPassword: "pass2",
+      },
+    } as any as Request;
+
+    await authController.secureAccount(reqSecure, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith("Internal server error");
   });
 });

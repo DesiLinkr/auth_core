@@ -38,4 +38,17 @@ export class AuthValidation {
   static secureVerifyToken = Joi.object({
     token: Joi.string().length(64).required(),
   });
+  static secureAccount = Joi.object({
+    token: Joi.string().length(64).required(),
+
+    newPassword: Joi.string()
+      .min(8)
+      .pattern(/[A-Z]/)
+      .pattern(/[a-z]/)
+      .pattern(/[0-9]/)
+      .pattern(/[^a-zA-Z0-9]/)
+      .required(),
+
+    oldPassword: Joi.string(),
+  });
 }

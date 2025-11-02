@@ -44,4 +44,9 @@ AuthRouter.post(
   authController.secureVerifyToken
 );
 
+AuthRouter.post(
+  "/secure/account",
+  validate(AuthValidation.secureAccount),
+  authController.secureAccount
+);
 export default AuthRouter;

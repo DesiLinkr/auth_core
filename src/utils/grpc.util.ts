@@ -2,6 +2,8 @@ import { grpcClient } from "../grpc/client";
 import {
   CreateSessionRequest,
   CreateSessionResponse,
+  delsessionsRequest,
+  delsessionsResponse,
 } from "../grpc/generated/access";
 import {
   AccessVerifierRequest,
@@ -64,6 +66,20 @@ export const sendforgotPassword = (
 ): Promise<emailServiceResponse> => {
   return new Promise((resolve, reject) => {
     grpcClient.email.sendforgotPassword(request, (error, response) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(response);
+      }
+    });
+  });
+};
+
+export const delAllsessions = (
+  request: delsessionsRequest
+): Promise<delsessionsResponse> => {
+  return new Promise((resolve, reject) => {
+    grpcClient.access.delAllsessions(request, (error, response) => {
       if (error) {
         reject(error);
       } else {

@@ -23,4 +23,5 @@ export class ForgotPasswordTokenCache extends AbstractTokenCache {
     const userId = await this.getToken(forgotToken);
     return userId;
   };
+  
 }

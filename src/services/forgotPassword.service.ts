@@ -1,24 +1,17 @@
 import { ForgotPasswordTokenCache } from "../cache/forgotPassword.cache";
 import { ForgotPasswordRequest } from "../grpc/generated/email";
 import { AuthRepository } from "../repositories/auth.repository";
-import { settingsRepository } from "../repositories/settings.repository";
 import { sendforgotPassword } from "../utils/grpc.util";
 import { Hasher } from "../utils/hash.util";
 
 export class ForgotPasswordService {
   private readonly hasher: Hasher;
   private readonly AuthRepo: AuthRepository;
-  private readonly settingsRepo: settingsRepository;
   private readonly cache: ForgotPasswordTokenCache;
-  constructor(
-    AuthRepo?: AuthRepository,
-    cache?: ForgotPasswordTokenCache,
-    settingsRepo?: settingsRepository
-  ) {
+  constructor(AuthRepo?: AuthRepository, cache?: ForgotPasswordTokenCache) {
     this.hasher = new Hasher();
     this.AuthRepo = AuthRepo ?? new AuthRepository();
     this.cache = cache ?? new ForgotPasswordTokenCache();
-    this.settingsRepo = settingsRepo ?? new settingsRepository();
   }
   resetPassword = async (token: string, password: string) => {
     const UserId = await this.cache.getUserIdfromToken(token);
@@ -31,7 +24,7 @@ export class ForgotPasswordService {
     }
     const hashedPassword = await this.hasher.Password(password);
 
-    await this.settingsRepo.setPassword(UserId, hashedPassword);
+    await this.AuthRepo.setPassword(UserId, hashedPassword);
 
     await this.cache.deleteToken(token);
     return {
