@@ -13,42 +13,88 @@ describe("Settings Repository", () => {
     updatedAt: new Date(),
   };
 
-  describe("setPassword", () => {
-    it("should update the password for a given userId", async () => {
-      const updatedUser = { ...mockUser, password: "newSecret" };
+  const mockEmail = {
+    id: "email123",
+    email: "test@example.com",
+    userId: "user123",
+    isVerified: false,
+    isPrimary: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
-      (mockPrisma.user.update as jest.Mock).mockResolvedValue(updatedUser);
+  it("should update the password for a given userId", async () => {
+    const updatedUser = { ...mockUser, password: "newSecret" };
 
-      const result = await SettingsRepo.setPassword("user123", "newSecret");
+    (mockPrisma.user.update as jest.Mock).mockResolvedValue(updatedUser);
 
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: "user123" },
-        data: { password: "newSecret" },
-      });
+    const result = await SettingsRepo.setPassword("user123", "newSecret");
 
-      expect(result).toEqual(updatedUser);
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: "user123" },
+      data: { password: "newSecret" },
     });
+
+    expect(result).toEqual(updatedUser);
   });
 
-  describe("findUserInfoById", () => {
-    it("should return user info if user exists", async () => {
-      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+  it("should add a new email record for the user", async () => {
+    (mockPrisma.email.create as jest.Mock).mockResolvedValue(mockEmail);
 
-      const result = await SettingsRepo.findUserInfoById("user123");
+    const result = await SettingsRepo.addEmailtoUser(
+      "user123",
+      "test@example.com"
+    );
 
-      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: "user123" },
-      });
-
-      expect(result).toEqual(mockUser);
+    expect(mockPrisma.email.create).toHaveBeenCalledWith({
+      data: {
+        email: "test@example.com",
+        userId: "user123",
+        isVerified: false,
+        isPrimary: false,
+      },
     });
 
-    it("should return null if user does not exist", async () => {
-      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+    expect(result).toEqual(mockEmail);
+  });
 
-      const result = await SettingsRepo.findUserInfoById("non_existing_id");
+  it("should return user info if user exists", async () => {
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
-      expect(result).toBeNull();
+    const result = await SettingsRepo.findUserInfoById("user123");
+
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: "user123" },
     });
+
+    expect(result).toEqual(mockUser);
+  });
+
+  it("should return null if user does not exist", async () => {
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const result = await SettingsRepo.findUserInfoById("non_existing_id");
+
+    expect(result).toBeNull();
+  });
+
+  it("should return email record if found", async () => {
+    (mockPrisma.email.findUnique as jest.Mock).mockResolvedValue(mockEmail);
+
+    const result = await SettingsRepo.checkEmailexits("test@example.com");
+
+    expect(mockPrisma.email.findUnique).toHaveBeenCalledWith({
+      where: { email: "test@example.com" },
+    });
+
+    expect(result).toEqual(mockEmail);
+  });
+
+  it("should return null if email does not exist", async () => {
+    (mockPrisma.email.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const result = await SettingsRepo.checkEmailexits("notfound@example.com");
+
+    expect(result).toBeNull();
   });
 });

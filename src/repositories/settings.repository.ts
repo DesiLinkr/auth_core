@@ -17,10 +17,26 @@ export class settingsRepository {
       },
     });
   };
-
+  public addEmailtoUser = async (userId: string, email: string) => {
+    return await this.prisma.email.create({
+      data: {
+        email,
+        userId,
+        isVerified: false,
+        isPrimary: false,
+      },
+    });
+  };
   public findUserInfoById = async (id: string) => {
     return await this.prisma.user.findUnique({
       where: { id },
     });
+  };
+  public checkEmailexits = async (email: string) => {
+    const result = await this.prisma.email.findUnique({
+      where: { email },
+    });
+
+    return result;
   };
 }

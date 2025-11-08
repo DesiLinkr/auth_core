@@ -17,6 +17,7 @@ describe("SettingsController", () => {
     // Create a mocked service instance
     mockService = {
       changePassword: jest.fn(),
+      addEmail: jest.fn(),
     } as unknown as jest.Mocked<SettingsService>;
 
     // @ts-ignore override real service with mock
@@ -54,5 +55,53 @@ describe("SettingsController", () => {
 
     expect(mockRes.status).toHaveBeenCalledWith(500);
     expect(mockRes.json).toHaveBeenCalledWith("DB error");
+  });
+
+  it("should call addEmail service with correct params", async () => {
+    mockReq.body = { email: "test@example.com" };
+
+    (mockService.addEmail as jest.Mock).mockResolvedValue({
+      message: "email added",
+    });
+
+    await controller.addNewEmail(mockReq as Request, mockRes as Response);
+
+    expect(mockService.addEmail).toHaveBeenCalledWith(
+      "user-1",
+      "test@example.com"
+    );
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledWith({ message: "email added" });
+  });
+
+  it("should return error message with proper status if service returns error", async () => {
+    mockReq.body = { email: "duplicate@example.com" };
+
+    (mockService.addEmail as jest.Mock).mockResolvedValue({
+      error: "email already exists",
+      status: 409,
+    });
+
+    await controller.addNewEmail(mockReq as Request, mockRes as Response);
+
+    expect(mockService.addEmail).toHaveBeenCalledWith(
+      "user-1",
+      "duplicate@example.com"
+    );
+    expect(mockRes.status).toHaveBeenCalledWith(409);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      message: "email already exists",
+    });
+  });
+
+  it("should handle unexpected errors and return 500", async () => {
+    (mockService.addEmail as jest.Mock).mockRejectedValue(
+      new Error("unexpected error")
+    );
+
+    await controller.addNewEmail(mockReq as Request, mockRes as Response);
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith("unexpected error");
   });
 });
