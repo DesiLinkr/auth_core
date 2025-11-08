@@ -1,17 +1,61 @@
 import { AuthRepository } from "../repositories/auth.repository";
 import { settingsRepository } from "../repositories/settings.repository";
 import { Hasher } from "../utils/hash.util";
-
+import { sendVerificationEmail } from "../utils/grpc.util";
+import { EmailVerificationTokenCache } from "../cache/emailVerification.cache";
 export class SettingsService {
   private readonly hasher: Hasher;
   private readonly authRepo: AuthRepository;
   private readonly settingsRepo: settingsRepository;
-
-  constructor(AuthRepo?: AuthRepository, settingsRepo?: settingsRepository) {
+  private readonly Verificationcache: EmailVerificationTokenCache;
+  constructor(
+    AuthRepo?: AuthRepository,
+    settingsRepo?: settingsRepository,
+    Verificationcache?: EmailVerificationTokenCache
+  ) {
+    this.Verificationcache =
+      Verificationcache ?? new EmailVerificationTokenCache();
     this.hasher = new Hasher();
     this.authRepo = AuthRepo ?? new AuthRepository();
     this.settingsRepo = settingsRepo ?? new settingsRepository();
   }
+  public addEmail = async (userId: string, email: string) => {
+    const Emailexits: any = await this.settingsRepo.checkEmailexits(email);
+    if (!Emailexits) {
+      console.log(userId);
+
+      await this.settingsRepo.addEmailtoUser(userId, email);
+      const user: any = await this.authRepo.findUserInfoById(userId);
+      const token = await this.hasher.generateToken();
+      const expirytime = 600;
+      await this.Verificationcache.createToken(userId, token, expirytime);
+
+      await sendVerificationEmail({
+        to: email,
+        data: {
+          name: user?.name,
+          expiry: Math.floor(expirytime / 60),
+          verifyUrl: `${process.env.url}:${process.env.PORT}/${token}`,
+          year: `${new Date().getFullYear()}`,
+          context: "secondary",
+        },
+        retry: 0,
+      });
+      return {
+        message: "email addded and verification email sent successfully  ",
+      };
+    } else if (Emailexits.id !== userId) {
+      return {
+        error: "email is already exists with other user",
+        status: 409,
+      };
+    } else {
+      return {
+        error: "email already exists",
+        status: 409,
+      };
+    }
+  };
 
   public changePassword = async (
     userId: string,
@@ -45,6 +89,7 @@ export class SettingsService {
     const hashedPassword = await this.hasher.Password(newPassword);
 
     await this.settingsRepo.setPassword(userId, hashedPassword);
+
     return {
       message: "password changed",
     };

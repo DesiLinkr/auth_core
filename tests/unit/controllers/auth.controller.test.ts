@@ -169,7 +169,7 @@ describe("Auth Controller", () => {
   });
 
   // ------------------------ SECURE ACCOUNT ------------------------
-  it("should return 201 and result when secureAccount succeeds", async () => {
+  it("should return 200 and result when secureAccount succeeds", async () => {
     const mockResult = { message: "Password updated successfully" };
     mockAuthService.secure = jest.fn().mockResolvedValue(mockResult);
 
@@ -188,7 +188,7 @@ describe("Auth Controller", () => {
       "oldPass123",
       "newPass456"
     );
-    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(mockResult);
   });
 

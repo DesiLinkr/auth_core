@@ -104,17 +104,17 @@ export class AuthService {
     const expirytime = 600;
     await this.Verificationcache.createToken(userData.id, token, expirytime);
 
-    const req: VerificationEmailRequest = {
+    sendVerificationEmail({
       to: email,
       data: {
         name,
         expiry: Math.floor(expirytime / 60),
         verifyUrl: `${process.env.url}:${process.env.PORT}/${token}`,
         year: `${new Date().getFullYear()}`,
+        context: "registration",
       },
       retry: 0,
-    };
-
+    });
     const { password, ...safeUser } = userData;
 
     return safeUser;

@@ -12,4 +12,11 @@ settingsRouter.post(
   verifyAccessToken,
   settingsController.changepassword
 );
+
+settingsRouter.post(
+  "/add-email",
+  validate(settingsValidation.addEmail),
+  verifyAccessToken,
+  settingsController.addNewEmail
+);
 export default settingsRouter;

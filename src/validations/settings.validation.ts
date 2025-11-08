@@ -8,4 +8,8 @@ export class settingsValidation {
       .disallow(Joi.ref("oldPassword")),
     oldPassword: Joi.string().min(8).required(),
   });
+
+  static addEmail = Joi.object({
+    email: Joi.string().email().required(),
+  });
 }
