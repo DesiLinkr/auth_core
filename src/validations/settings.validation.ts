@@ -9,7 +9,7 @@ export class settingsValidation {
     oldPassword: Joi.string().min(8).required(),
   });
 
-  static addEmail = Joi.object({
+  static email = Joi.object({
     email: Joi.string().email().required(),
   });
 }

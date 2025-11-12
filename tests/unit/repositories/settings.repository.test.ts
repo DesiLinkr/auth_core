@@ -23,6 +23,66 @@ describe("Settings Repository", () => {
     updatedAt: new Date(),
   };
 
+  it("should call prisma.delete with correct email", async () => {
+    const email = "delete@example.com";
+    (mockPrisma.email.delete as jest.Mock).mockResolvedValue({
+      id: "1",
+      email,
+    });
+
+    await SettingsRepo.removeEmail(email);
+
+    expect(mockPrisma.email.delete).toHaveBeenCalledWith({
+      where: { email },
+    });
+  });
+
+  it("should throw error if delete fails", async () => {
+    const email = "fail@example.com";
+    (mockPrisma.email.delete as jest.Mock).mockRejectedValue(
+      new Error("Delete failed")
+    );
+
+    await expect(SettingsRepo.removeEmail(email)).rejects.toThrow(
+      "Delete failed"
+    );
+  });
+
+  it("should return the email record if found", async () => {
+    const email = "user@example.com";
+    const userId = "user123";
+    const mockRecord = { id: "email123", email, userId };
+
+    (mockPrisma.email.findUnique as jest.Mock).mockResolvedValue(mockRecord);
+
+    const result = await SettingsRepo.checkEmailAssociatedWithUserId(
+      email,
+      userId
+    );
+
+    expect(mockPrisma.email.findUnique).toHaveBeenCalledWith({
+      where: { email, userId },
+    });
+    expect(result).toEqual(mockRecord);
+  });
+
+  it("should return null when email not found", async () => {
+    const email = "notfound@example.com";
+    const userId = "user456";
+
+    (mockPrisma.email.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const result = await SettingsRepo.checkEmailAssociatedWithUserId(
+      email,
+      userId
+    );
+
+    expect(mockPrisma.email.findUnique).toHaveBeenCalledWith({
+      where: { email, userId },
+    });
+    expect(result).toBeNull();
+  });
+
   it("should update the password for a given userId", async () => {
     const updatedUser = { ...mockUser, password: "newSecret" };
 

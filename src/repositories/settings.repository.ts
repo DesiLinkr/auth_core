@@ -39,4 +39,19 @@ export class settingsRepository {
 
     return result;
   };
+  public checkEmailAssociatedWithUserId = async (
+    email: string,
+    userId: string
+  ) => {
+    const result = await this.prisma.email.findUnique({
+      where: { email, userId },
+    });
+    return result;
+  };
+
+  public removeEmail = async (email: string) => {
+    await this.prisma.email.delete({
+      where: { email },
+    });
+  };
 }

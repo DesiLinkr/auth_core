@@ -8,10 +8,20 @@ jest.mock("../../../src/repositories/settings.repository");
 jest.mock("../../../src/utils/hash.util");
 
 describe("SettingsService", () => {
+  const mockdata = (overrides = {}) => ({
+    id: "UserId123",
+    email: "mock@example.com",
+    userId: "user123",
+    isPrimary: false,
+    isVerified: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  });
   let service: SettingsService;
   let mockSettingsRepo: jest.Mocked<settingsRepository>;
   let mockHasher: jest.Mocked<Hasher>;
-
+  let mockAuthRepo: jest.Mocked<AuthRepository>;
   const userId = "user-123";
   const oldPasswordHash = "old-password-hash";
 
@@ -32,17 +42,20 @@ describe("SettingsService", () => {
       findUserInfoById: jest.fn(),
       setPassword: jest.fn(),
       checkEmailexits: jest.fn(),
+      removeEmail: jest.fn(),
       addEmailtoUser: jest.fn(),
+      checkEmailAssociatedWithUserId: jest.fn(),
     } as any;
 
+    mockAuthRepo = {
+      findUserInfoById: jest.fn(),
+    } as any;
     mockHasher = {
+      generateToken: jest.fn(),
       comparePassword: jest.fn(),
       Password: jest.fn(),
     } as any;
-    service = new SettingsService(
-      new AuthRepository() as any,
-      mockSettingsRepo
-    );
+    service = new SettingsService(mockAuthRepo as any, mockSettingsRepo);
     (service as any).hasher = mockHasher;
   });
 
@@ -67,7 +80,7 @@ describe("SettingsService", () => {
     const result = await service.addEmail(userId, email);
 
     expect(result).toEqual({
-      error: "email already exists with other user",
+      error: "email is already exists with other user",
       status: 409,
     });
     expect(mockSettingsRepo.addEmailtoUser).not.toHaveBeenCalled();
@@ -81,7 +94,7 @@ describe("SettingsService", () => {
     const result = await service.addEmail(userId, email);
 
     expect(result).toEqual({
-      error: "email already exists",
+      error: "email is already exists with other user",
       status: 409,
     });
     expect(mockSettingsRepo.addEmailtoUser).not.toHaveBeenCalled();
@@ -175,5 +188,64 @@ describe("SettingsService", () => {
     await expect(
       service.changePassword(userId, "new-pass", "old-pass")
     ).rejects.toThrow("hash error");
+  });
+
+  it("should return 403 if email does not exist", async () => {
+    mockSettingsRepo.checkEmailAssociatedWithUserId.mockResolvedValue(null);
+
+    const result = await service.removeEmail("user123", "notfound@example.com");
+
+    expect(
+      mockSettingsRepo.checkEmailAssociatedWithUserId
+    ).toHaveBeenCalledWith("notfound@example.com", "user123");
+    expect(result).toEqual({
+      error: "email does not exits",
+      status: 403,
+    });
+  });
+
+  it("should return 409 if email is primary", async () => {
+    mockSettingsRepo.checkEmailAssociatedWithUserId.mockResolvedValue(
+      mockdata({ isPrimary: true })
+    );
+
+    const result = await service.removeEmail("user123", "primary@example.com");
+
+    expect(
+      mockSettingsRepo.checkEmailAssociatedWithUserId
+    ).toHaveBeenCalledWith("primary@example.com", "user123");
+    expect(result).toEqual({
+      error: "you can not remove primary email",
+      status: 409,
+    });
+  });
+
+  it("should call removeEmail and return success message", async () => {
+    mockSettingsRepo.checkEmailAssociatedWithUserId.mockResolvedValue(
+      mockdata({ isPrimary: false })
+    );
+
+    const result = await service.removeEmail("user123", "mock@example.com");
+
+    expect(
+      mockSettingsRepo.checkEmailAssociatedWithUserId
+    ).toHaveBeenCalledWith("mock@example.com", "user123");
+    expect(mockSettingsRepo.removeEmail).toHaveBeenCalledWith(
+      "mock@example.com"
+    );
+    expect(result).toEqual({
+      message: "email removed successful",
+    });
+  });
+
+  it("should throw if removeEmail fails", async () => {
+    mockSettingsRepo.checkEmailAssociatedWithUserId.mockResolvedValue(
+      mockdata({ isPrimary: false })
+    );
+    mockSettingsRepo.removeEmail.mockRejectedValue(new Error("DB error"));
+
+    await expect(
+      service.removeEmail("user123", "error@example.com")
+    ).rejects.toThrow("DB error");
   });
 });
