@@ -15,8 +15,14 @@ settingsRouter.post(
 
 settingsRouter.post(
   "/add-email",
-  validate(settingsValidation.addEmail),
+  validate(settingsValidation.email),
   verifyAccessToken,
   settingsController.addNewEmail
+);
+settingsRouter.post(
+  "/remove-email",
+  validate(settingsValidation.email),
+  verifyAccessToken,
+  settingsController.removeEmail
 );
 export default settingsRouter;

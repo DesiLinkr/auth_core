@@ -11,19 +11,41 @@ export class SettingsService {
   constructor(
     AuthRepo?: AuthRepository,
     settingsRepo?: settingsRepository,
-    Verificationcache?: EmailVerificationTokenCache
+    Verificationcache?: EmailVerificationTokenCache,
+    hasher?: Hasher
   ) {
     this.Verificationcache =
       Verificationcache ?? new EmailVerificationTokenCache();
-    this.hasher = new Hasher();
+    this.hasher = hasher ?? new Hasher();
     this.authRepo = AuthRepo ?? new AuthRepository();
     this.settingsRepo = settingsRepo ?? new settingsRepository();
   }
+  public removeEmail = async (userId: string, email: string) => {
+    const Emailexits: any =
+      await this.settingsRepo.checkEmailAssociatedWithUserId(email, userId);
+    console.log(Emailexits);
+
+    if (!Emailexits) {
+      return {
+        error: "email does not exits",
+        status: 403,
+      };
+    } else if (Emailexits.isPrimary) {
+      return {
+        error: "you can not remove primary email",
+        status: 409,
+      };
+    }
+    await this.settingsRepo.removeEmail(email);
+
+    return {
+      message: "email removed successful",
+    };
+  };
+
   public addEmail = async (userId: string, email: string) => {
     const Emailexits: any = await this.settingsRepo.checkEmailexits(email);
     if (!Emailexits) {
-      console.log(userId);
-
       await this.settingsRepo.addEmailtoUser(userId, email);
       const user: any = await this.authRepo.findUserInfoById(userId);
       const token = await this.hasher.generateToken();

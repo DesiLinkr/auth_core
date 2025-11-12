@@ -9,6 +9,8 @@ describe("SettingsController", () => {
   let controller: SettingsController;
   let mockService: jest.Mocked<SettingsService>;
   let mockReq: Partial<Request>;
+  let fakereq: Partial<Request>;
+  let mock: Partial<Request>;
   let mockRes: Partial<Response>;
 
   beforeEach(() => {
@@ -18,16 +20,21 @@ describe("SettingsController", () => {
     mockService = {
       changePassword: jest.fn(),
       addEmail: jest.fn(),
+      removeEmail: jest.fn(),
     } as unknown as jest.Mocked<SettingsService>;
 
     // @ts-ignore override real service with mock
     controller = new SettingsController();
     (controller as any).SettingsService = mockService;
 
-    // Fake req/res
     mockReq = {
       body: { oldPassword: "oldpassword", newPassword: "newPassword123" },
       userId: "user-1", // custom injected in middleware
+    } as any;
+    // Fake req/res
+    fakereq = {
+      body: { email: "mock@example.com" },
+      userId: "user123", // custom injected in middleware
     } as any;
 
     mockRes = {
@@ -103,5 +110,51 @@ describe("SettingsController", () => {
 
     expect(mockRes.status).toHaveBeenCalledWith(500);
     expect(mockRes.json).toHaveBeenCalledWith("unexpected error");
+  });
+
+  it("should respond with error message and status when result contains error", async () => {
+    mockService.removeEmail.mockResolvedValue({
+      error: "email does not exits",
+      status: 403,
+    });
+
+    await controller.removeEmail(fakereq as Request, mockRes as Response);
+
+    expect(mockService.removeEmail).toHaveBeenCalledWith(
+      "user123",
+      "mock@example.com"
+    );
+    expect(mockRes.status).toHaveBeenCalledWith(403);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      message: "email does not exits",
+    });
+  });
+
+  it("should respond with 500 if service throws error", async () => {
+    mockService.removeEmail.mockRejectedValue(new Error("DB error"));
+
+    await controller.removeEmail(fakereq as Request, mockRes as Response);
+
+    expect(mockService.removeEmail).toHaveBeenCalledWith(
+      "user123",
+      "mock@example.com"
+    );
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith("DB error");
+  });
+
+  it("should not call res.status if no error in result", async () => {
+    mockService.removeEmail.mockResolvedValue({
+      message: "email removed successful",
+    });
+
+    await controller.removeEmail(fakereq as Request, mockRes as Response);
+
+    expect(mockService.removeEmail).toHaveBeenCalledWith(
+      "user123",
+      "mock@example.com"
+    );
+    expect(mockRes.status).not.toHaveBeenCalled();
+    expect(mockRes.json).not.toHaveBeenCalled();
   });
 });

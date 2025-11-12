@@ -8,6 +8,21 @@ export class SettingsController {
   constructor() {
     this.SettingsService = new SettingsService();
   }
+
+  public removeEmail = async (req: Request, res: Response) => {
+    try {
+      const result: any = await this.SettingsService.removeEmail(
+        (req as any).userId,
+        req.body.email
+      );
+      if ("error" in result) {
+        res.status(result.status).json({ message: result.error });
+      }
+    } catch (error: any) {
+      res.status(500).json(error.message);
+    }
+  };
+
   public addNewEmail = async (req: Request, res: Response) => {
     try {
       const result: any = await this.SettingsService.addEmail(
@@ -19,8 +34,6 @@ export class SettingsController {
       }
       res.status(200).json(result);
     } catch (error: any) {
-      console.log(error);
-
       res.status(500).json(error.message);
     }
   };
