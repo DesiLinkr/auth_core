@@ -9,6 +9,21 @@ export class SettingsController {
     this.SettingsService = new SettingsService();
   }
 
+  public changePrimaryEmail = async (req: Request, res: Response) => {
+    try {
+      const result: any = await this.SettingsService.changePrimaryEmail(
+        (req as any).userId,
+        req.body.email
+      );
+
+      if ("error" in result) {
+        res.status(result.status).json({ message: result.error });
+      }
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(500).json(error.message);
+    }
+  };
   public removeEmail = async (req: Request, res: Response) => {
     try {
       const result: any = await this.SettingsService.removeEmail(
@@ -16,6 +31,8 @@ export class SettingsController {
         req.body.email
       );
       if ("error" in result) {
+        console.log("errror", error);
+
         res.status(result.status).json({ message: result.error });
       }
     } catch (error: any) {

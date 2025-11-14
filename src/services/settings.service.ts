@@ -20,6 +20,27 @@ export class SettingsService {
     this.authRepo = AuthRepo ?? new AuthRepository();
     this.settingsRepo = settingsRepo ?? new settingsRepository();
   }
+  public changePrimaryEmail = async (userId: string, email: string) => {
+    const Emailexits: any =
+      await this.settingsRepo.checkEmailAssociatedWithUserId(email, userId);
+    console.log(Emailexits, email, userId);
+
+    if (!Emailexits) {
+      return {
+        error: "email does not exits",
+        status: 403,
+      };
+    } else if (Emailexits.isPrimary) {
+      return {
+        error: "this email is allready Primary",
+        status: 403,
+      };
+    }
+    await this.settingsRepo.changePrimaryEmail(userId, email);
+    return {
+      message: "successful isPrimary email",
+    };
+  };
   public removeEmail = async (userId: string, email: string) => {
     const Emailexits: any =
       await this.settingsRepo.checkEmailAssociatedWithUserId(email, userId);

@@ -25,4 +25,18 @@ settingsRouter.post(
   verifyAccessToken,
   settingsController.removeEmail
 );
+
+settingsRouter.post(
+  "/remove-email",
+  validate(settingsValidation.email),
+  verifyAccessToken,
+  settingsController.removeEmail
+);
+
+settingsRouter.post(
+  "/change-primary-email",
+  validate(settingsValidation.email),
+  verifyAccessToken,
+  settingsController.changePrimaryEmail
+);
 export default settingsRouter;
