@@ -6,6 +6,36 @@ export class settingsRepository {
   constructor(prisma?: PrismaClient) {
     this.prisma = prisma ?? new PrismaClient(); // fallback to real if none provided
   }
+
+  public changePrimaryEmail = (userId: string, newEmail: string) => {
+    return this.prisma.$transaction(async (tx) => {
+      const oldPrimary = await tx.email.findFirst({
+        where: { userId, isPrimary: true },
+      });
+
+      if (!oldPrimary) {
+        throw new Error("Primary email not found");
+      }
+
+      const newEmailRecord = await tx.email.findFirst({
+        where: { userId, email: newEmail },
+      });
+
+      if (!newEmailRecord) {
+        throw new Error("New email not found ");
+      }
+
+      await tx.email.update({
+        where: { id: newEmailRecord.id },
+        data: { isPrimary: true },
+      });
+      await tx.email.update({
+        where: { id: oldPrimary.id },
+        data: { isPrimary: false },
+      });
+      return { message: "Primary email updated successfully" };
+    });
+  };
   public setPassword = (userId: string, newPassword: string) => {
     return this.prisma.user.update({
       where: {

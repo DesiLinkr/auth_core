@@ -18,6 +18,7 @@ describe("SettingsController", () => {
 
     // Create a mocked service instance
     mockService = {
+      changePrimaryEmail: jest.fn(),
       changePassword: jest.fn(),
       addEmail: jest.fn(),
       removeEmail: jest.fn(),
@@ -156,5 +157,69 @@ describe("SettingsController", () => {
     );
     expect(mockRes.status).not.toHaveBeenCalled();
     expect(mockRes.json).not.toHaveBeenCalled();
+  });
+
+  it("should return error response with correct status", async () => {
+    mockService.changePrimaryEmail.mockResolvedValue({
+      error: "email does not exits",
+      status: 403,
+    });
+
+    await controller.changePrimaryEmail(
+      fakereq as Request,
+      mockRes as Response
+    );
+
+    expect(mockService.changePrimaryEmail).toHaveBeenCalledWith(
+      "user123",
+      "mock@example.com"
+    );
+
+    expect(mockRes.status).toHaveBeenCalledWith(403);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      message: "email does not exits",
+    });
+  });
+
+  it("should return primary email error", async () => {
+    mockService.changePrimaryEmail.mockResolvedValue({
+      error: "this email is allredy Primary",
+      status: 403,
+    });
+
+    await controller.changePrimaryEmail(
+      fakereq as Request,
+      mockRes as Response
+    );
+
+    expect(mockRes.status).toHaveBeenCalledWith(403);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      message: "this email is allredy Primary",
+    });
+  });
+
+  it("should  response 200 when successful ", async () => {
+    mockService.changePrimaryEmail.mockResolvedValue({
+      message: "successful isPrimary email",
+    });
+
+    await controller.changePrimaryEmail(
+      fakereq as Request,
+      mockRes as Response
+    );
+
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+  });
+
+  it("should return 500 if service throws exception", async () => {
+    mockService.changePrimaryEmail.mockRejectedValue(new Error("DB error"));
+
+    await controller.changePrimaryEmail(
+      fakereq as Request,
+      mockRes as Response
+    );
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith("DB error");
   });
 });

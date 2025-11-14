@@ -44,6 +44,7 @@ describe("SettingsService", () => {
       checkEmailexits: jest.fn(),
       removeEmail: jest.fn(),
       addEmailtoUser: jest.fn(),
+      changePrimaryEmail: jest.fn(),
       checkEmailAssociatedWithUserId: jest.fn(),
     } as any;
 
@@ -57,6 +58,85 @@ describe("SettingsService", () => {
     } as any;
     service = new SettingsService(mockAuthRepo as any, mockSettingsRepo);
     (service as any).hasher = mockHasher;
+  });
+  // ==================================================
+  // 🆕 changePrimaryEmail Tests
+  // ==================================================
+
+  it("should return 403 if email does not exist for user", async () => {
+    mockSettingsRepo.checkEmailAssociatedWithUserId.mockResolvedValue(null);
+
+    const result = await service.changePrimaryEmail(
+      "user123",
+      "missing@example.com"
+    );
+
+    expect(
+      mockSettingsRepo.checkEmailAssociatedWithUserId
+    ).toHaveBeenCalledWith("missing@example.com", "user123");
+
+    expect(result).toEqual({
+      error: "email does not exits",
+      status: 403,
+    });
+  });
+
+  it("should return 403 if email is already primary", async () => {
+    mockSettingsRepo.checkEmailAssociatedWithUserId.mockResolvedValue(
+      mockdata({ isPrimary: true })
+    );
+
+    const result = await service.changePrimaryEmail(
+      "user123",
+      "primary@example.com"
+    );
+
+    expect(result).toEqual({
+      error: "this email is allready Primary",
+      status: 403,
+    });
+  });
+
+  it("should call settingsRepo.changePrimaryEmail and return success message", async () => {
+    mockSettingsRepo.checkEmailAssociatedWithUserId.mockResolvedValue(
+      mockdata({ isPrimary: false })
+    );
+
+    mockSettingsRepo.changePrimaryEmail.mockResolvedValue({
+      message: "Primary email updated successfully",
+    });
+
+    const result = await service.changePrimaryEmail(
+      "user123",
+      "newprimary@example.com"
+    );
+
+    expect(
+      mockSettingsRepo.checkEmailAssociatedWithUserId
+    ).toHaveBeenCalledWith("newprimary@example.com", "user123");
+
+    expect(mockSettingsRepo.changePrimaryEmail).toHaveBeenCalledWith(
+      "user123",
+      "newprimary@example.com"
+    );
+
+    expect(result).toEqual({
+      message: "successful isPrimary email",
+    });
+  });
+
+  it("should throw if settingsRepo.changePrimaryEmail fails", async () => {
+    mockSettingsRepo.checkEmailAssociatedWithUserId.mockResolvedValue(
+      mockdata({ isPrimary: false })
+    );
+
+    mockSettingsRepo.changePrimaryEmail.mockRejectedValue(
+      new Error("DB error")
+    );
+
+    await expect(
+      service.changePrimaryEmail("user123", "test@example.com")
+    ).rejects.toThrow("DB error");
   });
 
   it("should add email and return success message if email does not exist", async () => {
