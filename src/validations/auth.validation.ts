@@ -51,4 +51,7 @@ export class AuthValidation {
 
     oldPassword: Joi.string(),
   });
+  static google = Joi.object({
+    credential: Joi.string().required(),
+  });
 }

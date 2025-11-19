@@ -12,5 +12,5 @@
   },
   "exclude": [ "dist"]
 ,
-  "include": ["src","tests","jest.config.*.ts", "tests/unit/controllers/auth.controller.test.ts", "tests/unit/services/auth.service.test.ts"]
+  "include": ["src","tests","jest.config.*.ts", "tests/unit/controllers/auth.controller.test.ts"]
 }

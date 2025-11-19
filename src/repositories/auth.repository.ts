@@ -47,7 +47,8 @@ export class AuthRepository {
   public createUser = (
     email: string,
     name: string,
-    password: string,
+    password: string | null,
+    isVerified: boolean = false,
     profileImage?: string
   ): Promise<User | null> => {
     return this.prisma.user.create({
@@ -59,7 +60,7 @@ export class AuthRepository {
           create: {
             email,
             isPrimary: true,
-            isVerified: false,
+            isVerified,
           },
         },
       },

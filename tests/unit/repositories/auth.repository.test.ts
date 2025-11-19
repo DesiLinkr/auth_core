@@ -1,6 +1,6 @@
 import { PlanType } from "@prisma/client";
 import { AuthRepository } from "../../../src/repositories/auth.repository";
-import { mockPrisma } from "../../../tests/mocks/prisma.mock";
+import { mockPrisma } from "../../mocks/prisma.mock";
 
 describe("AuthRepository", () => {
   const AuthRepo = new AuthRepository(mockPrisma);
@@ -137,6 +137,7 @@ describe("AuthRepository", () => {
         mockUser.email,
         mockUser.user.name,
         mockUser.user.password,
+        false,
         "dd"
       );
       expect(user).toBe(mockUserData);
