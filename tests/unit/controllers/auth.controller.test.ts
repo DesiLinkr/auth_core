@@ -36,6 +36,7 @@ describe("Auth Controller", () => {
     register: jest.fn(),
     login: jest.fn(),
     secure: jest.fn(),
+    googleSignIn: jest.fn(),
   };
 
   const authController = new AuthController(mockAuthService as any);
@@ -59,6 +60,71 @@ describe("Auth Controller", () => {
     body: { email: "test@example.com", password: "password123" },
     clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
   } as any as Request;
+
+  it("should return error status & message when AuthService.googleSignIn returns an error", async () => {
+    mockAuthService.googleSignIn = jest.fn().mockResolvedValue({
+      error: "Google email not verified",
+      status: 409,
+    });
+
+    const reqGoogle = {
+      body: { credential: "google-token" },
+      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
+    } as any;
+
+    await authController.googleSignIn(reqGoogle, res);
+
+    expect(mockAuthService.googleSignIn).toHaveBeenCalledWith(
+      "google-token",
+      "127.0.0.1",
+      "Mozilla/5.0"
+    );
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Google email not verified",
+    });
+  });
+
+  it("should return 200 and session token when google login succeeds", async () => {
+    mockAuthService.googleSignIn = jest.fn().mockResolvedValue({
+      sessionId: "session123",
+    });
+
+    const reqGoogle = {
+      body: { credential: "google-token" },
+      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
+    } as any;
+
+    await authController.googleSignIn(reqGoogle, res);
+
+    expect(mockAuthService.googleSignIn).toHaveBeenCalledWith(
+      "google-token",
+      "127.0.0.1",
+      "Mozilla/5.0"
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      sessionId: "session123",
+    });
+  });
+
+  it("should return 500 when googleSignIn throws an exception", async () => {
+    mockAuthService.googleSignIn = jest
+      .fn()
+      .mockRejectedValue(new Error("Google crash"));
+
+    const reqGoogle = {
+      body: { credential: "google-token" },
+      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
+    } as any;
+
+    await authController.googleSignIn(reqGoogle, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith("Internal server error");
+  });
 
   it("should return 200 with success true if secure token is valid", async () => {
     mockCache.isvaildToken.mockResolvedValue(true);

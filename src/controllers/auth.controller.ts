@@ -9,6 +9,31 @@ class AuthController {
     this.AuthService = authService ?? new AuthService();
     this.cache = new SecureTokenCache();
   }
+
+  public googleSignIn = async (req: Request, res: Response) => {
+    try {
+      const { ip, user_agent } = (req as any).clientInfo;
+
+      console.log(req.body.credential, ip, user_agent);
+
+      const result: any = await this.AuthService.googleSignIn(
+        req.body.credential,
+        ip,
+        user_agent
+      );
+
+      if ("error" in result) {
+        console.log(result);
+
+        res.status(result.status).json({ message: result.error });
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      console.log(error);
+
+      res.status(500).json("Internal server error");
+    }
+  };
   public secureAccount = async (req: Request, res: Response) => {
     try {
       const { token, oldPassword, newPassword } = req.body;
@@ -25,8 +50,6 @@ class AuthController {
       }
       res.status(200).json(result);
     } catch (error) {
-      console.log(error);
-
       res.status(500).json("Internal server error");
     }
   };

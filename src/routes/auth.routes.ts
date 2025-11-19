@@ -49,4 +49,10 @@ AuthRouter.post(
   validate(AuthValidation.secureAccount),
   authController.secureAccount
 );
+AuthRouter.post(
+  "/google",
+  requestMeta,
+  validate(AuthValidation.google),
+  authController.googleSignIn
+);
 export default AuthRouter;

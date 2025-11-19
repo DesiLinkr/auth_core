@@ -35,7 +35,7 @@ model User {
   id           String   @id @default(uuid())
   emails       Email[] // One-to-many
   name         String
-  password     String
+  password     String?
   plan         PlanType @default(FREE)
   profileImage String?
   createdAt    DateTime @default(now())

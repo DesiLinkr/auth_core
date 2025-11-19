@@ -11,7 +11,7 @@ import {
   AccessEmailRequest,
   VerificationEmailRequest,
 } from "../grpc/generated/email";
-
+import { OAuth2Client } from "google-auth-library";
 import { SecureTokenCache } from "../cache/secure.cache";
 import { delsessionsRequest } from "../grpc/generated/access";
 
@@ -20,6 +20,7 @@ export class AuthService {
   private readonly hasher: Hasher;
   private readonly securecache: SecureTokenCache;
   private Verificationcache;
+  private client;
   constructor(
     secureTokenCache?: SecureTokenCache,
     authRepo?: AuthRepository,
@@ -30,7 +31,70 @@ export class AuthService {
     this.securecache = secureTokenCache ?? new SecureTokenCache();
     this.authRepo = authRepo ?? new AuthRepository();
     this.hasher = new Hasher();
+    this.client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   }
+
+  public googleSignIn = async (
+    credential: string,
+    ip: string,
+    userAgent: string
+  ) => {
+    let oldUser = true;
+    const ticket = await this.client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload: any = ticket.getPayload();
+    let userRecord: any = await this.authRepo.findByEmail(payload.email);
+    console.log(userRecord);
+
+    if (userRecord && !userRecord.isVerified) {
+      return {
+        error: "email not verified",
+        status: 409,
+      };
+    }
+
+    if (!userRecord) {
+      if (!payload?.email_verified) {
+        return {
+          error: "Google email not verified",
+          status: 409,
+        };
+      }
+      oldUser = false;
+      userRecord = await this.authRepo.createUser(
+        payload.email,
+        payload.name,
+        null,
+        true,
+        payload.picture || null
+      );
+    }
+    const userId = userRecord.user?.id || userRecord.id;
+    const userName = userRecord.user?.name || userRecord.name;
+    const userEmail = userRecord.email;
+
+    const Sessiontoken = await createSession({
+      ip,
+      userId,
+      userAgent,
+    });
+    const expirytime = 600;
+    const token = await this.hasher.generateToken();
+    await this.securecache.createToken(userId, token, expirytime);
+
+    if (oldUser) {
+      await sendAcesssEmail({
+        name: userName,
+        to: userEmail,
+        secureAccountUrl: `${process.env.url}:${process.env.PORT}/${token}`,
+        ipAddress: ip,
+      });
+    }
+
+    return Sessiontoken;
+  };
   public secure = async (
     token: string,
     oldPassword: string,
