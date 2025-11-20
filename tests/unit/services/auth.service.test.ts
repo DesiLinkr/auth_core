@@ -1,9 +1,15 @@
 import { PlanType } from "@prisma/client";
 import { AuthService } from "../../../src/services/auth.service";
-
+import axios from "axios";
+jest.mock("axios");
 // -------------------------------------------
 // Mock gRPC utilities
-// -------------------------------------------
+
+const githubCode = "dummy-code";
+
+// Mock axios
+const githubAxiosPost = axios.post as jest.Mock;
+const githubAxiosGet = axios.get as jest.Mock;
 jest.mock("../../../src/utils/grpc.util", () => ({
   sendVerificationEmail: jest.fn(),
   sendAcesssEmail: jest.fn(),
@@ -385,5 +391,120 @@ describe("AuthService", () => {
     expect(result).toEqual({
       message: "password changed && logout form all devices successfully ",
     });
+  });
+
+  it("should return error if GitHub email not found", async () => {
+    githubAxiosPost.mockResolvedValue({
+      data: { access_token: "gh_token" },
+    });
+
+    githubAxiosGet
+      .mockResolvedValueOnce({ data: { name: "GH User" } }) // /user
+      .mockResolvedValueOnce({ data: [] }); // /emails → no primary email
+
+    const result = await authService.githubSignIn(githubCode, ip, userAgent);
+
+    expect(result).toEqual({
+      error: "GitHub email not available",
+      status: 400,
+    });
+  });
+
+  it("should block existing user if not verified", async () => {
+    githubAxiosPost.mockResolvedValue({
+      data: { access_token: "gh_token" },
+    });
+
+    githubAxiosGet
+      .mockResolvedValueOnce({ data: { name: "OldUser" } }) // /user
+      .mockResolvedValueOnce({
+        data: [{ email: "old@mail.com", primary: true }],
+      }); // /emails
+
+    mockAuthRepo.findByEmail.mockResolvedValue({
+      email: "old@mail.com",
+      isVerified: false,
+    });
+
+    const result = await authService.githubSignIn(githubCode, ip, userAgent);
+
+    expect(result).toEqual({
+      error: "email not verified",
+      status: 409,
+    });
+  });
+
+  it("should create new GitHub user if not exists", async () => {
+    githubAxiosPost.mockResolvedValue({
+      data: { access_token: "token123" },
+    });
+
+    githubAxiosGet
+      .mockResolvedValueOnce({
+        data: { name: "NewGHUser", avatar_url: "pic.jpg" },
+      })
+      .mockResolvedValueOnce({
+        data: [{ email: "new@mail.com", primary: true }],
+      });
+
+    mockAuthRepo.findByEmail.mockResolvedValue(null);
+
+    const createdUser = {
+      id: "newUserId",
+      email: "new@mail.com",
+      name: "NewGHUser",
+      user: { id: "newUserId", name: "NewGHUser" },
+    };
+
+    mockAuthRepo.createUser.mockResolvedValue(createdUser);
+
+    mockHasher.generateToken.mockResolvedValue("secure123");
+    mockSecureCache.createToken.mockResolvedValue({});
+    (createSession as jest.Mock).mockResolvedValue({
+      sessionId: "sess123",
+    });
+
+    const result = await authService.githubSignIn(githubCode, ip, userAgent);
+
+    expect(mockAuthRepo.createUser).toHaveBeenCalledWith(
+      "new@mail.com",
+      "NewGHUser",
+      null,
+      true,
+      "pic.jpg"
+    );
+
+    expect(result).toEqual({ sessionId: "sess123" });
+  });
+
+  it("should login existing verified GitHub user", async () => {
+    githubAxiosPost.mockResolvedValue({
+      data: { access_token: "abc_token" },
+    });
+
+    githubAxiosGet
+      .mockResolvedValueOnce({
+        data: { name: "ExistingUser", avatar_url: "avt.png" },
+      })
+      .mockResolvedValueOnce({
+        data: [{ email: "exist@mail.com", primary: true }],
+      });
+
+    mockAuthRepo.findByEmail.mockResolvedValue({
+      user: { id: "u44", name: "ExistingUser" },
+      email: "exist@mail.com",
+      isVerified: true,
+    });
+
+    (createSession as jest.Mock).mockResolvedValue({
+      sessionId: "xyz123",
+    });
+
+    mockHasher.generateToken.mockResolvedValue("secureGHToken");
+    mockSecureCache.createToken.mockResolvedValue({});
+
+    const result = await authService.githubSignIn(githubCode, ip, userAgent);
+
+    expect(result).toEqual({ sessionId: "xyz123" });
   });
 });
