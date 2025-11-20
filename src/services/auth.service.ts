@@ -36,10 +36,93 @@ export class AuthService {
     this.client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   }
 
-  public githubSignIn = async (code: string, ip: string, userAgent: string) => {
+  public linkedinSignIn = async (
+    code: string,
+    ip: string,
+    userAgent: string
+  ) => {
     if (!code) {
       return { error: "code is required", status: 400 };
     }
+    let oldUser = true;
+    const tokenRes = await axios.post(
+      "https://www.linkedin.com/oauth/v2/accessToken",
+      new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: process.env.LINKEDIN_REDIRECT_URI!,
+        client_id: process.env.LINKEDIN_CLIENT_ID!,
+        client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+      }).toString(),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    const accessToken = tokenRes.data.access_token;
+
+    const profileRes = await axios.get("https://api.linkedin.com/v2/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const emailRes = await axios.get(
+      "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    let avatar_url = null;
+    const picture = profileRes.data.profilePicture?.["displayImage~"]?.elements;
+
+    if (picture && picture.length > 0) {
+      const last = picture[picture.length - 1];
+      avatar_url = last.identifiers[0].identifier;
+    }
+    const name =
+      profileRes.data.localizedFirstName +
+      " " +
+      profileRes.data.localizedLastName;
+
+    const email = emailRes.data.elements[0]["handle~"].emailAddress;
+    if (!email) {
+      return { error: "LinkedIn email not available", status: 400 };
+    }
+    let userRecord: any = await this.authRepo.findByEmail(email);
+    if (userRecord && !userRecord.isVerified) {
+      return { error: "email not verified", status: 409 };
+    }
+    if (!userRecord) {
+      oldUser = false;
+
+      userRecord = await this.authRepo.createUser(
+        email,
+        name,
+        null,
+        true,
+        avatar_url
+      );
+    }
+
+    const userId = userRecord.user?.id || userRecord.id;
+    const userName = userRecord.user?.name || userRecord.name;
+    const userEmail = userRecord.email;
+    const session = await createSession({ ip, userId, userAgent });
+    const secureToken = await this.hasher.generateToken();
+    await this.securecache.createToken(userId, secureToken, 600);
+    if (oldUser) {
+      await sendAcesssEmail({
+        name: userName,
+        to: userEmail,
+        secureAccountUrl: `${process.env.url}:${process.env.PORT}/${secureToken}`,
+        ipAddress: ip,
+      });
+    }
+    return session;
+  };
+
+  public githubSignIn = async (code: string, ip: string, userAgent: string) => {
     const tokenRes = await axios.post(
       "https://github.com/login/oauth/access_token",
       {

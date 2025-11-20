@@ -9,11 +9,31 @@ class AuthController {
     this.AuthService = authService ?? new AuthService();
     this.cache = new SecureTokenCache();
   }
+
+  public linkedinSignIn = async (req: Request, res: Response) => {
+    try {
+      const { ip, user_agent } = (req as any).clientInfo;
+      const result: any = await this.AuthService.linkedinSignIn(
+        req.body.code as string,
+        ip,
+        user_agent
+      );
+
+      if ("error" in result) {
+        res.status(result.status).json({ message: result.error });
+      }
+      res.status(200).json(result);
+    } catch (error) {
+      console.log(error);
+
+      res.status(500).json("Internal server error");
+    }
+  };
   public githubSignIn = async (req: Request, res: Response) => {
     try {
       const { ip, user_agent } = (req as any).clientInfo;
       const result: any = await this.AuthService.githubSignIn(
-        req.query.code as string,
+        req.body.code as string,
         ip,
         user_agent
       );
@@ -33,7 +53,7 @@ class AuthController {
       const { ip, user_agent } = (req as any).clientInfo;
 
       const result: any = await this.AuthService.googleSignIn(
-        req.body.credential,
+        req.body.code,
         ip,
         user_agent
       );
