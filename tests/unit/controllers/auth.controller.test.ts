@@ -37,6 +37,7 @@ describe("Auth Controller", () => {
     login: jest.fn(),
     secure: jest.fn(),
     googleSignIn: jest.fn(),
+    githubSignIn: jest.fn(),
   };
 
   const authController = new AuthController(mockAuthService as any);
@@ -60,6 +61,72 @@ describe("Auth Controller", () => {
     body: { email: "test@example.com", password: "password123" },
     clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
   } as any as Request;
+  // ------------------------ GITHUB SIGN IN ------------------------
+
+  it("should return error status & message when AuthService.githubSignIn returns an error", async () => {
+    mockAuthService.githubSignIn = jest.fn().mockResolvedValue({
+      error: "email not verified",
+      status: 409,
+    });
+
+    const reqGithub = {
+      query: { code: "gh-code-123" },
+      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
+    } as any;
+
+    await authController.githubSignIn(reqGithub, res);
+
+    expect(mockAuthService.githubSignIn).toHaveBeenCalledWith(
+      "gh-code-123",
+      "127.0.0.1",
+      "Mozilla/5.0"
+    );
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "email not verified",
+    });
+  });
+
+  it("should return 200 and session token when GitHub login succeeds", async () => {
+    mockAuthService.githubSignIn = jest.fn().mockResolvedValue({
+      sessionId: "gh-session-123",
+    });
+
+    const reqGithub = {
+      query: { code: "gh-code-123" },
+      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
+    } as any;
+
+    await authController.githubSignIn(reqGithub, res);
+
+    expect(mockAuthService.githubSignIn).toHaveBeenCalledWith(
+      "gh-code-123",
+      "127.0.0.1",
+      "Mozilla/5.0"
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      sessionId: "gh-session-123",
+    });
+  });
+
+  it("should return 500 when githubSignIn throws an exception", async () => {
+    mockAuthService.githubSignIn = jest
+      .fn()
+      .mockRejectedValue(new Error("GitHub crash"));
+
+    const reqGithub = {
+      query: { code: "gh-code-123" },
+      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
+    } as any;
+
+    await authController.githubSignIn(reqGithub, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith("Internal server error");
+  });
 
   it("should return error status & message when AuthService.googleSignIn returns an error", async () => {
     mockAuthService.googleSignIn = jest.fn().mockResolvedValue({

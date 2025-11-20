@@ -55,4 +55,7 @@ AuthRouter.post(
   validate(AuthValidation.google),
   authController.googleSignIn
 );
+
+AuthRouter.get("/github/callback", requestMeta, authController.githubSignIn);
+
 export default AuthRouter;

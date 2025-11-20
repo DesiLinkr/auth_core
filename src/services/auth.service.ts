@@ -14,6 +14,8 @@ import {
 import { OAuth2Client } from "google-auth-library";
 import { SecureTokenCache } from "../cache/secure.cache";
 import { delsessionsRequest } from "../grpc/generated/access";
+import axios from "axios";
+import { string } from "joi";
 
 export class AuthService {
   private readonly authRepo: AuthRepository;
@@ -33,7 +35,69 @@ export class AuthService {
     this.hasher = new Hasher();
     this.client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   }
+  public githubSignIn = async (code: string, ip: string, userAgent: string) => {
+    if (!code) {
+      return { error: "code is required", status: 400 };
+    }
+    const tokenRes = await axios.post(
+      "https://github.com/login/oauth/access_token",
+      {
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+        redirect_uri: process.env.GITHUB_REDIRECT_URI,
+      },
+      { headers: { Accept: "application/json" } }
+    );
+    console.log(tokenRes);
 
+    let oldUser = true;
+    const accessToken = tokenRes.data.access_token;
+
+    const ghUser = await axios.get("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const ghEmails = await axios.get("https://api.github.com/user/emails", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const email = ghEmails.data.find((e: any) => e.primary)?.email;
+
+    if (!email) {
+      return { error: "GitHub email not available", status: 400 };
+    }
+
+    let userRecord: any = await this.authRepo.findByEmail(email);
+    console.log(userRecord);
+
+    if (userRecord && !userRecord.isVerified) {
+      return { error: "email not verified", status: 409 };
+    }
+
+    if (!userRecord) {
+      oldUser = false;
+
+      userRecord = await this.authRepo.createUser(
+        email,
+        ghUser.data.name || "GitHub User",
+        null,
+        true,
+        ghUser.data.avatar_url || null
+      );
+    }
+
+    const userId = userRecord.user?.id || userRecord.id;
+    const userName = userRecord.user?.name || userRecord.name;
+    const userEmail = userRecord.email;
+
+    const session = await createSession({ ip, userId, userAgent });
+
+    const secureToken = await this.hasher.generateToken();
+    await this.securecache.createToken(userId, secureToken, 600);
+
+    return session;
+  };
   public googleSignIn = async (
     credential: string,
     ip: string,
@@ -42,11 +106,11 @@ export class AuthService {
     let oldUser = true;
     const ticket = await this.client.verifyIdToken({
       idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: process.env.GOOGLE_CLIENT_ID2,
     });
     const payload: any = ticket.getPayload();
+
     let userRecord: any = await this.authRepo.findByEmail(payload.email);
-    console.log(userRecord);
 
     if (userRecord && !userRecord.isVerified) {
       return {
