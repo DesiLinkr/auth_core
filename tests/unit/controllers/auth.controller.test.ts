@@ -3,8 +3,14 @@ import AuthController from "../../../src/controllers/auth.controller";
 
 describe("Auth Controller", () => {
   let mockCache: any;
+  let req: Partial<Request>;
 
   beforeEach(() => {
+    req = {
+      body: {},
+      clientInfo: { ip: "192.168.1.10", user_agent: "Mozilla" },
+    } as any;
+
     mockCache = {
       isvaildToken: jest.fn(),
     };
@@ -36,6 +42,7 @@ describe("Auth Controller", () => {
     register: jest.fn(),
     login: jest.fn(),
     secure: jest.fn(),
+    linkedinSignIn: jest.fn(),
     googleSignIn: jest.fn(),
     githubSignIn: jest.fn(),
   };
@@ -62,6 +69,59 @@ describe("Auth Controller", () => {
     clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
   } as any as Request;
   // ------------------------ GITHUB SIGN IN ------------------------
+  it("should return error status + message when linkedinSignIn returns error", async () => {
+    req.body = { code: "abc123" };
+
+    mockAuthService.linkedinSignIn.mockResolvedValue({
+      error: "email not verified",
+      status: 409,
+    });
+
+    await authController.linkedinSignIn(req as Request, res as Response);
+
+    expect(mockAuthService.linkedinSignIn).toHaveBeenCalledWith(
+      "abc123",
+      "192.168.1.10",
+      "Mozilla"
+    );
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({ message: "email not verified" });
+  });
+
+  // ------------------------------------------------------------------
+  // 2) Successful LinkedIn login
+  // ------------------------------------------------------------------
+  it("should return 200 with session on success", async () => {
+    req.body = { code: "linkedin-code" };
+
+    mockAuthService.linkedinSignIn.mockResolvedValue({
+      sessionId: "sessLIN999",
+    });
+
+    await authController.linkedinSignIn(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      sessionId: "sessLIN999",
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // 3) Service throws exception → return 500
+  // ------------------------------------------------------------------
+  it("should return 500 when linkedinSignIn throws error", async () => {
+    req.body = { code: "ERR" };
+
+    mockAuthService.linkedinSignIn.mockRejectedValue(
+      new Error("LinkedIn API down")
+    );
+
+    await authController.linkedinSignIn(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith("Internal server error");
+  });
 
   it("should return error status & message when AuthService.githubSignIn returns an error", async () => {
     mockAuthService.githubSignIn = jest.fn().mockResolvedValue({
@@ -70,7 +130,7 @@ describe("Auth Controller", () => {
     });
 
     const reqGithub = {
-      query: { code: "gh-code-123" },
+      body: { code: "gh-code-123" },
       clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
     } as any;
 
@@ -94,7 +154,7 @@ describe("Auth Controller", () => {
     });
 
     const reqGithub = {
-      query: { code: "gh-code-123" },
+      body: { code: "gh-code-123" },
       clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
     } as any;
 
@@ -118,7 +178,7 @@ describe("Auth Controller", () => {
       .mockRejectedValue(new Error("GitHub crash"));
 
     const reqGithub = {
-      query: { code: "gh-code-123" },
+      body: { code: "gh-code-123" },
       clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
     } as any;
 
@@ -135,7 +195,7 @@ describe("Auth Controller", () => {
     });
 
     const reqGoogle = {
-      body: { credential: "google-token" },
+      body: { code: "google-token" },
       clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
     } as any;
 
@@ -159,7 +219,7 @@ describe("Auth Controller", () => {
     });
 
     const reqGoogle = {
-      body: { credential: "google-token" },
+      body: { code: "google-token" },
       clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
     } as any;
 
@@ -183,7 +243,7 @@ describe("Auth Controller", () => {
       .mockRejectedValue(new Error("Google crash"));
 
     const reqGoogle = {
-      body: { credential: "google-token" },
+      body: { code: "google-token" },
       clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
     } as any;
 

@@ -7,7 +7,7 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 const app = new App().getInstance();
 
-describe("GET /api/auth/github/callback", () => {
+describe("POST /api/auth/github/callback", () => {
   const endpoint = "/api/auth/github/callback";
 
   beforeEach(() => {
@@ -28,8 +28,8 @@ describe("GET /api/auth/github/callback", () => {
       });
 
     const res = await request(app)
-      .get(endpoint)
-      .query({ code: "f55a8edea2f04e3b88d2" })
+      .post(endpoint)
+      .send({ code: "0b978e03d50286bcf9aa" })
       .set("User-Agent", "integration-test")
       .set("X-Forwarded-For", "127.0.0.1");
 
@@ -39,12 +39,14 @@ describe("GET /api/auth/github/callback", () => {
 
   it("Returns 400 if code is missing", async () => {
     const res = await request(app)
-      .get(endpoint)
+      .post(endpoint)
+      .send({})
       .set("User-Agent", "integration-test")
       .set("X-Forwarded-For", "127.0.0.1");
     expect(res.statusCode).toBe(400);
     expect(res.body).toStrictEqual({
-      message: "code is required",
+      error: "Validation error",
+      details: ['"code" is required'],
     });
   });
 
@@ -60,8 +62,8 @@ describe("GET /api/auth/github/callback", () => {
       .mockResolvedValueOnce({ data: [] });
 
     const res = await request(app)
-      .get(endpoint)
-      .query({ code: "f55a8edea2f04e3b88d2" })
+      .post(endpoint)
+      .send({ code: "0b978e03d50286bcf9aa" })
       .set("User-Agent", "integration-test")
       .set("X-Forwarded-For", "127.0.0.1");
     expect(res.statusCode).toBe(400);
@@ -88,8 +90,8 @@ describe("GET /api/auth/github/callback", () => {
       });
 
     const res = await request(app)
-      .get(endpoint)
-      .query({ code: "f55a8edea2f04e3b88d2" })
+      .post(endpoint)
+      .send({ code: "0b978e03d50286bcf9aa" })
       .set("User-Agent", "integration-test")
       .set("X-Forwarded-For", "127.0.0.1");
     expect(res.statusCode).toBe(409);
@@ -114,8 +116,8 @@ describe("GET /api/auth/github/callback", () => {
       });
 
     const res = await request(app)
-      .get(endpoint)
-      .query({ code: "f55a8edea2f04e3b88d2" })
+      .post(endpoint)
+      .send({ code: "0b978e03d50286bcf9aa" })
       .set("User-Agent", "integration-test")
       .set("X-Forwarded-For", "127.0.0.1");
     expect(res.statusCode).toBe(200);
@@ -126,8 +128,8 @@ describe("GET /api/auth/github/callback", () => {
     mockedAxios.post.mockRejectedValue(new Error("GitHub failure"));
 
     const res = await request(app)
-      .get(endpoint)
-      .query({ code: "invalid-code" })
+      .post(endpoint)
+      .send({ code: "invalid-code" })
       .set("User-Agent", "integration-test")
       .set("X-Forwarded-For", "127.0.0.1");
 

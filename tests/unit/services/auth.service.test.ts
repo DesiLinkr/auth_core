@@ -101,6 +101,180 @@ describe("AuthService", () => {
   // -------------------------------------------------------------------
   // ✅ GOOGLE SIGN IN TESTS (inside same describe)
   // -------------------------------------------------------------------
+  // -------------------------------------------------------------------
+  // ✅ LINKEDIN SIGN-IN TESTS
+  // -------------------------------------------------------------------
+
+  const linkedinAxiosPost = axios.post as jest.Mock;
+  const linkedinAxiosGet = axios.get as jest.Mock;
+
+  it("should return error if LinkedIn code missing", async () => {
+    const result = await authService.linkedinSignIn("", ip, userAgent);
+
+    expect(result).toEqual({
+      error: "code is required",
+      status: 400,
+    });
+  });
+
+  it("should create new LinkedIn user if not exists", async () => {
+    // LinkedIn token
+    linkedinAxiosPost.mockResolvedValue({
+      data: { access_token: "li_token_123" },
+    });
+
+    // LinkedIn profile
+    linkedinAxiosGet
+      .mockResolvedValueOnce({
+        data: {
+          localizedFirstName: "Harsh",
+          localizedLastName: "Tagra",
+          profilePicture: {
+            "displayImage~": {
+              elements: [
+                {
+                  identifiers: [
+                    { identifier: "https://linkedin.com/avatar123" },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          elements: [
+            { "handle~": { emailAddress: "harsh.linkedin@mail.com" } },
+          ],
+        },
+      });
+
+    mockAuthRepo.findByEmail.mockResolvedValue(null);
+
+    mockAuthRepo.createUser.mockResolvedValue({
+      id: "u101",
+      email: "harsh.linkedin@mail.com",
+      name: "Harsh Tagra",
+      user: { id: "u101", name: "Harsh Tagra" },
+    });
+
+    mockHasher.generateToken.mockResolvedValue("liSecureToken");
+    mockSecureCache.createToken.mockResolvedValue({});
+    (createSession as jest.Mock).mockResolvedValue({ sessionId: "sessLIN1" });
+
+    const result = await authService.linkedinSignIn("li-code", ip, userAgent);
+
+    expect(mockAuthRepo.createUser).toHaveBeenCalledWith(
+      "harsh.linkedin@mail.com",
+      "Harsh Tagra",
+      null,
+      true,
+      "https://linkedin.com/avatar123"
+    );
+
+    expect(result).toEqual({ sessionId: "sessLIN1" });
+  });
+
+  it("should login existing LinkedIn user", async () => {
+    linkedinAxiosPost.mockResolvedValue({
+      data: { access_token: "li_token_555" },
+    });
+
+    linkedinAxiosGet
+      .mockResolvedValueOnce({
+        data: {
+          localizedFirstName: "Existing",
+          localizedLastName: "User",
+          profilePicture: {
+            "displayImage~": {
+              elements: [
+                {
+                  identifiers: [{ identifier: "https://li/avatar2.png" }],
+                },
+              ],
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          elements: [{ "handle~": { emailAddress: "existing@mail.com" } }],
+        },
+      });
+
+    mockAuthRepo.findByEmail.mockResolvedValue({
+      user: { id: "u500", name: "Existing User" },
+      email: "existing@mail.com",
+      isVerified: true,
+    });
+
+    mockHasher.generateToken.mockResolvedValue("secureToken");
+    mockSecureCache.createToken.mockResolvedValue({});
+    (createSession as jest.Mock).mockResolvedValue({
+      sessionId: "LI_EXIST_SESSION",
+    });
+
+    const result = await authService.linkedinSignIn("li-code", ip, userAgent);
+
+    expect(result).toEqual({ sessionId: "LI_EXIST_SESSION" });
+  });
+
+  it("should send access email for existing LinkedIn user", async () => {
+    linkedinAxiosPost.mockResolvedValue({
+      data: { access_token: "li_token_x" },
+    });
+
+    linkedinAxiosGet
+      .mockResolvedValueOnce({
+        data: {
+          localizedFirstName: "Access",
+          localizedLastName: "Notify",
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          elements: [{ "handle~": { emailAddress: "notify@mail.com" } }],
+        },
+      });
+
+    mockAuthRepo.findByEmail.mockResolvedValue({
+      user: { id: "u99", name: "Access Notify" },
+      email: "notify@mail.com",
+      isVerified: true,
+    });
+
+    mockHasher.generateToken.mockResolvedValue("secureLinkedIN");
+    mockSecureCache.createToken.mockResolvedValue({});
+    (createSession as jest.Mock).mockResolvedValue({
+      sessionId: "notifyLIN",
+    });
+
+    const result = await authService.linkedinSignIn("codeXYZ", ip, userAgent);
+
+    expect(sendAcesssEmail).toHaveBeenCalled();
+    expect(result).toEqual({ sessionId: "notifyLIN" });
+  });
+
+  it("should throw error if LinkedIn token request fails", async () => {
+    linkedinAxiosPost.mockRejectedValue(new Error("LinkedIn Down"));
+
+    await expect(
+      authService.linkedinSignIn("badcode", ip, userAgent)
+    ).rejects.toThrow("LinkedIn Down");
+  });
+
+  it("should throw error if LinkedIn profile fetch fails", async () => {
+    linkedinAxiosPost.mockResolvedValue({
+      data: { access_token: "oktok" },
+    });
+
+    linkedinAxiosGet.mockRejectedValue(new Error("Profile Fail"));
+
+    await expect(
+      authService.linkedinSignIn("123", ip, userAgent)
+    ).rejects.toThrow("Profile Fail");
+  });
 
   it("should return error if user exists but email not verified", async () => {
     mockGooglePayload();

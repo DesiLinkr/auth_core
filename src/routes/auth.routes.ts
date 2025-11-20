@@ -52,10 +52,20 @@ AuthRouter.post(
 AuthRouter.post(
   "/google",
   requestMeta,
-  validate(AuthValidation.google),
+  validate(AuthValidation.social),
   authController.googleSignIn
 );
 
-AuthRouter.get("/github/callback", requestMeta, authController.githubSignIn);
-
+AuthRouter.post(
+  "/github/callback",
+  requestMeta,
+  validate(AuthValidation.social),
+  authController.githubSignIn
+);
+AuthRouter.post(
+  "/linkedin/callback",
+  requestMeta,
+  validate(AuthValidation.social),
+  authController.linkedinSignIn
+);
 export default AuthRouter;
