@@ -18,18 +18,28 @@ export class AuthRepository {
       },
     });
   };
-
   public findUserInfoById = async (
     id: string,
     withPassword: boolean = false
   ) => {
     return await this.prisma.user.findUnique({
       where: { id },
-      omit: {
-        password: !withPassword,
+      select: {
+        id: true,
+        name: true,
+        profileImage: true,
+        password: withPassword,
+        emails: {
+          where: { isPrimary: true },
+          select: {
+            email: true,
+            isVerified: true,
+          },
+        },
       },
     });
   };
+
   public findByEmail = async (email: string): Promise<EmailWithUser | null> => {
     return await this.prisma.email.findUnique({
       where: { email },

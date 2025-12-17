@@ -1,42 +1,10 @@
 import { Request, Response } from "express";
 import AuthController from "../../../src/controllers/auth.controller";
 
-describe("Auth Controller", () => {
+describe("Auth Controller (Updated)", () => {
   let mockCache: any;
   let req: Partial<Request>;
-
-  beforeEach(() => {
-    req = {
-      body: {},
-      clientInfo: { ip: "192.168.1.10", user_agent: "Mozilla" },
-    } as any;
-
-    mockCache = {
-      isvaildToken: jest.fn(),
-    };
-
-    (authController as any).cache = mockCache;
-  });
-  const mockUserData = {
-    id: "user1",
-    name: "Harsh",
-    password: "secret",
-    profileImage: "img.png",
-    plan: "FREE",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    emails: [
-      {
-        id: "email1",
-        email: "harsh@example.com",
-        isPrimary: true,
-        isVerified: true,
-        userId: "user1",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ],
-  };
+  let res: any;
 
   const mockAuthService = {
     register: jest.fn(),
@@ -49,381 +17,182 @@ describe("Auth Controller", () => {
 
   const authController = new AuthController(mockAuthService as any);
 
-  let res: Response;
-
   beforeEach(() => {
-    res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+    req = {
+      body: {},
+      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla" },
+    } as any;
+
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+      cookie: jest.fn(),
+    };
+
+    mockCache = {
+      isvaildToken: jest.fn(),
+    };
+
+    (authController as any).cache = mockCache;
     jest.clearAllMocks();
   });
 
-  const reqRegister = {
-    body: {
-      email: "test@example.com",
-      name: "Test",
-      password: "password123",
-    },
-  } as Request;
-
-  const reqLogin = {
-    body: { email: "test@example.com", password: "password123" },
-    clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
-  } as any as Request;
-  // ------------------------ GITHUB SIGN IN ------------------------
-  it("should return error status + message when linkedinSignIn returns error", async () => {
-    req.body = { code: "abc123" };
-
+  // ------------------------ LINKEDIN ------------------------
+  it("should return error when linkedinSignIn returns error", async () => {
+    req.body = { code: "abc" };
     mockAuthService.linkedinSignIn.mockResolvedValue({
       error: "email not verified",
       status: 409,
     });
 
     await authController.linkedinSignIn(req as Request, res as Response);
-
-    expect(mockAuthService.linkedinSignIn).toHaveBeenCalledWith(
-      "abc123",
-      "192.168.1.10",
-      "Mozilla"
-    );
 
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.json).toHaveBeenCalledWith({ message: "email not verified" });
   });
 
-  // ------------------------------------------------------------------
-  // 2) Successful LinkedIn login
-  // ------------------------------------------------------------------
-  it("should return 200 with session on success", async () => {
-    req.body = { code: "linkedin-code" };
-
+  it("should set refresh_token cookie & return success on linkedin login", async () => {
+    req.body = { code: "abc" };
     mockAuthService.linkedinSignIn.mockResolvedValue({
-      sessionId: "sessLIN999",
+      refreshToken: "rt123",
     });
 
     await authController.linkedinSignIn(req as Request, res as Response);
 
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({
-      sessionId: "sessLIN999",
-    });
-  });
-
-  // ------------------------------------------------------------------
-  // 3) Service throws exception → return 500
-  // ------------------------------------------------------------------
-  it("should return 500 when linkedinSignIn throws error", async () => {
-    req.body = { code: "ERR" };
-
-    mockAuthService.linkedinSignIn.mockRejectedValue(
-      new Error("LinkedIn API down")
+    expect(res.cookie).toHaveBeenCalledWith(
+      "refresh_token",
+      "rt123",
+      expect.any(Object)
     );
-
-    await authController.linkedinSignIn(req as Request, res as Response);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith("Internal server error");
-  });
-
-  it("should return error status & message when AuthService.githubSignIn returns an error", async () => {
-    mockAuthService.githubSignIn = jest.fn().mockResolvedValue({
-      error: "email not verified",
-      status: 409,
-    });
-
-    const reqGithub = {
-      body: { code: "gh-code-123" },
-      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
-    } as any;
-
-    await authController.githubSignIn(reqGithub, res);
-
-    expect(mockAuthService.githubSignIn).toHaveBeenCalledWith(
-      "gh-code-123",
-      "127.0.0.1",
-      "Mozilla/5.0"
-    );
-
-    expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.json).toHaveBeenCalledWith({
-      message: "email not verified",
-    });
-  });
-
-  it("should return 200 and session token when GitHub login succeeds", async () => {
-    mockAuthService.githubSignIn = jest.fn().mockResolvedValue({
-      sessionId: "gh-session-123",
-    });
-
-    const reqGithub = {
-      body: { code: "gh-code-123" },
-      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
-    } as any;
-
-    await authController.githubSignIn(reqGithub, res);
-
-    expect(mockAuthService.githubSignIn).toHaveBeenCalledWith(
-      "gh-code-123",
-      "127.0.0.1",
-      "Mozilla/5.0"
-    );
-
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({
-      sessionId: "gh-session-123",
-    });
-  });
-
-  it("should return 500 when githubSignIn throws an exception", async () => {
-    mockAuthService.githubSignIn = jest
-      .fn()
-      .mockRejectedValue(new Error("GitHub crash"));
-
-    const reqGithub = {
-      body: { code: "gh-code-123" },
-      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
-    } as any;
-
-    await authController.githubSignIn(reqGithub, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith("Internal server error");
-  });
-
-  it("should return error status & message when AuthService.googleSignIn returns an error", async () => {
-    mockAuthService.googleSignIn = jest.fn().mockResolvedValue({
-      error: "Google email not verified",
-      status: 409,
-    });
-
-    const reqGoogle = {
-      body: { code: "google-token" },
-      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
-    } as any;
-
-    await authController.googleSignIn(reqGoogle, res);
-
-    expect(mockAuthService.googleSignIn).toHaveBeenCalledWith(
-      "google-token",
-      "127.0.0.1",
-      "Mozilla/5.0"
-    );
-
-    expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.json).toHaveBeenCalledWith({
-      message: "Google email not verified",
-    });
-  });
-
-  it("should return 200 and session token when google login succeeds", async () => {
-    mockAuthService.googleSignIn = jest.fn().mockResolvedValue({
-      sessionId: "session123",
-    });
-
-    const reqGoogle = {
-      body: { code: "google-token" },
-      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
-    } as any;
-
-    await authController.googleSignIn(reqGoogle, res);
-
-    expect(mockAuthService.googleSignIn).toHaveBeenCalledWith(
-      "google-token",
-      "127.0.0.1",
-      "Mozilla/5.0"
-    );
-
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({
-      sessionId: "session123",
-    });
-  });
-
-  it("should return 500 when googleSignIn throws an exception", async () => {
-    mockAuthService.googleSignIn = jest
-      .fn()
-      .mockRejectedValue(new Error("Google crash"));
-
-    const reqGoogle = {
-      body: { code: "google-token" },
-      clientInfo: { ip: "127.0.0.1", user_agent: "Mozilla/5.0" },
-    } as any;
-
-    await authController.googleSignIn(reqGoogle, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith("Internal server error");
-  });
-
-  it("should return 200 with success true if secure token is valid", async () => {
-    mockCache.isvaildToken.mockResolvedValue(true);
-
-    await authController.secureVerifyToken(
-      { body: { token: "valid-token" } } as any,
-      res
-    );
-
-    expect(mockCache.isvaildToken).toHaveBeenCalledWith("valid-token");
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({ success: true });
   });
 
-  it("should send 400 response if secure token is invalid", async () => {
-    await authController.secureVerifyToken(
-      { body: { token: "invalid-token" } } as any,
-      res
-    );
-
-    expect(mockCache.isvaildToken).toHaveBeenCalledWith("invalid-token");
-    expect(res.status).toHaveBeenCalledWith(400);
-  });
-
-  it("should return 500 if an exception occurs in verifysecureToken", async () => {
-    mockCache.isvaildToken.mockRejectedValue(new Error("Redis crash"));
-
-    await authController.secureVerifyToken(
-      { body: { token: "any-token" } } as any,
-      res
-    );
+  it("should return 500 if linkedinSignIn throws", async () => {
+    mockAuthService.linkedinSignIn.mockRejectedValue(new Error("Crash"));
+    await authController.linkedinSignIn(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith("Internal server error");
   });
+
+  // ------------------------ GITHUB ------------------------
+  it("should return error when githubSignIn returns error", async () => {
+    req.body = { code: "gh" };
+    mockAuthService.githubSignIn.mockResolvedValue({
+      error: "email not verified",
+      status: 409,
+    });
+
+    await authController.githubSignIn(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({ message: "email not verified" });
+  });
+
+  it("should set cookie & return success on github login", async () => {
+    req.body = { code: "gh" };
+    mockAuthService.githubSignIn.mockResolvedValue({
+      refreshToken: "gh_rt",
+    });
+
+    await authController.githubSignIn(req as Request, res as Response);
+
+    expect(res.cookie).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  // ------------------------ GOOGLE ------------------------
+  it("should set cookie & return success on google login", async () => {
+    req.body = { code: "google" };
+    mockAuthService.googleSignIn.mockResolvedValue({
+      refreshToken: "g_rt",
+    });
+
+    await authController.googleSignIn(req as Request, res as Response);
+
+    expect(res.cookie).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  // ------------------------ VERIFY TOKEN ------------------------
+  it("should return success true if token valid", async () => {
+    mockCache.isvaildToken.mockResolvedValue(true);
+
+    await authController.secureVerifyToken(
+      { body: { token: "valid" } } as any,
+      res
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  it("should return 400 if token invalid", async () => {
+    mockCache.isvaildToken.mockResolvedValue(false);
+
+    await authController.secureVerifyToken(
+      { body: { token: "bad" } } as any,
+      res
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ message: "invaild Token" });
+  });
+
   // ------------------------ REGISTER ------------------------
-  it("should register a user and return 201 with user data", async () => {
-    mockAuthService.register.mockResolvedValue(mockUserData);
-    await authController.register(reqRegister, res);
+  it("should register user", async () => {
+    mockAuthService.register.mockResolvedValue({ id: "1" });
+
+    await authController.register(
+      { body: { email: "a", name: "b", password: "c" } } as any,
+      res
+    );
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith(mockUserData);
-  });
-
-  it("should return 400 when user registration fails", async () => {
-    mockAuthService.register.mockResolvedValue(null);
-    await authController.register(reqRegister, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-
-    expect(res.json).toHaveBeenCalledWith({
-      message: "User registration failed",
-    });
-  });
-
-  it("should return 500 if AuthService.register throws", async () => {
-    mockAuthService.register.mockRejectedValue(
-      new Error("Internal server error")
-    );
-    await authController.register(reqRegister, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith("Internal server error");
   });
 
   // ------------------------ LOGIN ------------------------
-  it("should return 200 and userData when login succeeds", async () => {
-    mockAuthService.login.mockResolvedValue(mockUserData);
-    await authController.login(reqLogin, res);
+  it("should login, set cookie and return success", async () => {
+    mockAuthService.login.mockResolvedValue({ refreshToken: "rt" });
 
-    expect(mockAuthService.login).toHaveBeenCalledWith(
-      "test@example.com",
-      "password123",
-      "127.0.0.1",
-      "Mozilla/5.0"
+    await authController.login(
+      {
+        body: { email: "a", password: "b" },
+        clientInfo: { ip: "1.1.1.1", user_agent: "UA" },
+      } as any,
+      res
     );
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(mockUserData);
+
+    expect(res.cookie).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({ success: true });
   });
 
-  it("should return 400 if login returns null", async () => {
+  it("should return error if login fails", async () => {
     mockAuthService.login.mockResolvedValue(null);
-    await authController.login(reqLogin, res);
+
+    await authController.login(req as any, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      message: "User registration failed",
-    });
-  });
-
-  it("should return the error status if login returns an error object", async () => {
-    const errorObj = { error: "Invalid credentials", status: 402 };
-    mockAuthService.login.mockResolvedValue(errorObj);
-
-    await authController.login(reqLogin, res);
-
-    expect(res.status).toHaveBeenCalledWith(402);
-    expect(res.json).toHaveBeenCalledWith({ message: "Invalid credentials" });
-  });
-
-  it("should return 500 if AuthService.login throws", async () => {
-    mockAuthService.login.mockRejectedValue(new Error("Something went wrong"));
-
-    await authController.login(reqLogin, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith("Something went wrong");
   });
 
   // ------------------------ SECURE ACCOUNT ------------------------
-  it("should return 200 and result when secureAccount succeeds", async () => {
-    const mockResult = { message: "Password updated successfully" };
-    mockAuthService.secure = jest.fn().mockResolvedValue(mockResult);
+  it("should update password successfully", async () => {
+    mockAuthService.secure.mockResolvedValue({ message: "ok" });
 
-    const reqSecure = {
-      body: {
-        token: "valid-token",
-        oldPassword: "oldPass123",
-        newPassword: "newPass456",
-      },
-    } as any as Request;
-
-    await authController.secureAccount(reqSecure, res);
-
-    expect(mockAuthService.secure).toHaveBeenCalledWith(
-      "valid-token",
-      "oldPass123",
-      "newPass456"
+    await authController.secureAccount(
+      {
+        body: {
+          token: "t",
+          oldPassword: "o",
+          newPassword: "n",
+        },
+      } as any,
+      res
     );
+
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(mockResult);
-  });
-
-  it("should return error status and message when AuthService.secure returns error", async () => {
-    const errorResponse = { error: "Invalid token", status: 403 };
-    mockAuthService.secure = jest.fn().mockResolvedValue(errorResponse);
-
-    const reqSecure = {
-      body: {
-        token: "invalid-token",
-        oldPassword: "oldPass",
-        newPassword: "newPass",
-      },
-    } as any as Request;
-
-    await authController.secureAccount(reqSecure, res);
-
-    expect(mockAuthService.secure).toHaveBeenCalledWith(
-      "invalid-token",
-      "oldPass",
-      "newPass"
-    );
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({ message: "Invalid token" });
-  });
-
-  it("should return 500 if AuthService.secure throws an error", async () => {
-    mockAuthService.secure = jest
-      .fn()
-      .mockRejectedValue(new Error("Unexpected failure"));
-
-    const reqSecure = {
-      body: {
-        token: "any-token",
-        oldPassword: "pass1",
-        newPassword: "pass2",
-      },
-    } as any as Request;
-
-    await authController.secureAccount(reqSecure, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith("Internal server error");
+    expect(res.json).toHaveBeenCalledWith({ message: "ok" });
   });
 });

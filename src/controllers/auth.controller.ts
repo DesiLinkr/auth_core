@@ -1,15 +1,28 @@
 import { Request, Response } from "express";
 import { AuthService } from "../services/auth.service";
 import { SecureTokenCache } from "../cache/secure.cache";
+import { AuthRepository } from "../repositories/auth.repository";
 
 class AuthController {
   private AuthService;
   public cache: SecureTokenCache;
-  constructor(authService?: AuthService) {
+  public authrepository: AuthRepository;
+  constructor(authService?: AuthService, authrepository?: AuthRepository) {
     this.AuthService = authService ?? new AuthService();
     this.cache = new SecureTokenCache();
+    this.authrepository = authrepository ?? new AuthRepository();
   }
 
+  public userProfile = async (req: Request, res: Response) => {
+    try {
+      const data = await this.authrepository.findUserInfoById(
+        (req as any).userId
+      );
+      res.status(200).json(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
   public linkedinSignIn = async (req: Request, res: Response) => {
     try {
       const { ip, user_agent } = (req as any).clientInfo;
@@ -22,7 +35,15 @@ class AuthController {
       if ("error" in result) {
         res.status(result.status).json({ message: result.error });
       }
-      res.status(200).json(result);
+      res.cookie("refresh_token", result.refreshToken, {
+        httpOnly: true, // ❗ cannot be accessed by JS
+        secure: false, // true in production (HTTPS)
+        sameSite: "lax", // works for OAuth redirects
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.status(200).json({ success: true });
     } catch (error) {
       console.log(error);
 
@@ -41,7 +62,16 @@ class AuthController {
       if ("error" in result) {
         res.status(result.status).json({ message: result.error });
       }
-      res.status(200).json(result);
+
+      res.cookie("refresh_token", result.refreshToken, {
+        httpOnly: true, // ❗ cannot be accessed by JS
+        secure: false, // true in production (HTTPS)
+        sameSite: "lax", // works for OAuth redirects
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.status(200).json({ success: true });
     } catch (error) {
       console.log(error);
 
@@ -63,7 +93,15 @@ class AuthController {
 
         res.status(result.status).json({ message: result.error });
       }
-      res.status(200).json(result);
+      res.cookie("refresh_token", result.refreshToken, {
+        httpOnly: true, // ❗ cannot be accessed by JS
+        secure: false, // true in production (HTTPS)
+        sameSite: "lax", // works for OAuth redirects
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.status(200).json({ success: true });
     } catch (error) {
       console.log(error);
 
@@ -108,7 +146,11 @@ class AuthController {
     try {
       const { email, name, password } = req.body;
 
-      const userData = await this.AuthService.register(name, email, password);
+      const userData: any = await this.AuthService.register(
+        name,
+        email,
+        password
+      );
       if (!userData) {
         res.status(400).json({ message: "User registration failed" });
         return;
@@ -126,21 +168,29 @@ class AuthController {
     try {
       const { email, password } = req.body;
       const { ip, user_agent } = (req as any).clientInfo;
-      const userData = await this.AuthService.login(
+      const result: any = await this.AuthService.login(
         email,
         password,
         ip,
         user_agent
       );
-      if (!userData) {
+      if (!result) {
         res.status(400).json({ message: "User registration failed" });
         return;
       }
-      if ("error" in userData) {
-        res.status(userData.status).json({ message: userData.error });
+      if ("error" in result) {
+        res.status(result.status).json({ message: result.error });
         return;
       }
-      res.status(200).json(userData);
+      res.cookie("refresh_token", result.refreshToken, {
+        httpOnly: true, // ❗ cannot be accessed by JS
+        secure: false, // true in production (HTTPS)
+        sameSite: "lax", // works for OAuth redirects
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.status(200).json({ success: true });
     } catch (error: any) {
       console.log(error);
 

@@ -70,16 +70,20 @@ describe("AuthRepository", () => {
   });
 
   // ✅ findUserInfoById()
+  // ✅ findUserInfoById()
   describe("findUserInfoById()", () => {
-    it("should return user info by ID without password field when user exists", async () => {
+    it("should return user info by ID without password when user exists", async () => {
       const expectedUserInfo = {
         id: mockUserData.id,
         name: mockUserData.name,
         profileImage: mockUserData.profileImage,
-        plan: mockUserData.plan,
-        createdAt: mockUserData.createdAt,
-        updatedAt: mockUserData.updatedAt,
-        emails: mockUserData.emails,
+        password: undefined,
+        emails: [
+          {
+            email: mockUserData.emails[0].email,
+            isVerified: mockUserData.emails[0].isVerified,
+          },
+        ],
       };
 
       (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(
@@ -87,34 +91,73 @@ describe("AuthRepository", () => {
       );
 
       const result = await AuthRepo.findUserInfoById(mockUserData.id);
+
       expect(result).toEqual(expectedUserInfo);
       expect(result?.password).toBeUndefined();
+
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: mockUserData.id },
-        omit: { password: true },
+        select: {
+          id: true,
+          name: true,
+          profileImage: true,
+          password: false,
+          emails: {
+            where: { isPrimary: true },
+            select: {
+              email: true,
+              isVerified: true,
+            },
+          },
+        },
       });
     });
 
     it("should return user info by ID with password when requested", async () => {
-      const userWithPassword = { ...mockUserData };
+      const userWithPassword = {
+        id: mockUserData.id,
+        name: mockUserData.name,
+        profileImage: mockUserData.profileImage,
+        password: mockUserData.password,
+        emails: [
+          {
+            email: mockUserData.emails[0].email,
+            isVerified: mockUserData.emails[0].isVerified,
+          },
+        ],
+      };
+
       (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(
         userWithPassword
       );
 
-      const result = await AuthRepo.findUserInfoById(
-        mockUserData.id,
-        true // withPassword = true
-      );
+      const result = await AuthRepo.findUserInfoById(mockUserData.id, true);
+
       expect(result?.password).toBeDefined();
+
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: mockUserData.id },
-        omit: { password: false },
+        select: {
+          id: true,
+          name: true,
+          profileImage: true,
+          password: true,
+          emails: {
+            where: { isPrimary: true },
+            select: {
+              email: true,
+              isVerified: true,
+            },
+          },
+        },
       });
     });
 
     it("should return null when user does not exist", async () => {
       (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
       const result = await AuthRepo.findUserInfoById("non_existing_user_id");
+
       expect(result).toBeNull();
     });
 
@@ -122,6 +165,7 @@ describe("AuthRepository", () => {
       (mockPrisma.user.findUnique as jest.Mock).mockRejectedValue(
         new Error("Query failed")
       );
+
       await expect(AuthRepo.findUserInfoById("user1")).rejects.toThrow(
         "Query failed"
       );

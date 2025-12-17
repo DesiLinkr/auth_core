@@ -1,3 +1,11 @@
+jest.mock("../../../src/redis/client", () => ({
+  redisClient: {
+    set: jest.fn(),
+    get: jest.fn(),
+    del: jest.fn(),
+    on: jest.fn(),
+  },
+}));
 import { SettingsService } from "../../../src/services/settings.service";
 import { AuthRepository } from "../../../src/repositories/auth.repository";
 import { settingsRepository } from "../../../src/repositories/settings.repository";
@@ -6,7 +14,11 @@ import { Hasher } from "../../../src/utils/hash.util";
 jest.mock("../../../src/repositories/auth.repository");
 jest.mock("../../../src/repositories/settings.repository");
 jest.mock("../../../src/utils/hash.util");
-
+jest.mock("../../../src/utils/grpc.util", () => ({
+  sendVerificationEmail: jest.fn().mockResolvedValue({
+    success: true,
+  }),
+}));
 describe("SettingsService", () => {
   const mockdata = (overrides = {}) => ({
     id: "UserId123",

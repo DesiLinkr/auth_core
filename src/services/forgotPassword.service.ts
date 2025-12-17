@@ -56,7 +56,7 @@ export class ForgotPasswordService {
       to: email,
       data: {
         name: userData.user.name,
-        resetLink: `http://localhost:${process.env.PORT}/${token}`,
+        resetLink: `http://localhost:${process.env.PORT}/forg${token}`,
         year: `${new Date().getFullYear()}`,
         expiry: Math.floor(expirytime / 60),
       },
