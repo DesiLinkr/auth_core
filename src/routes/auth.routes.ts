@@ -4,11 +4,12 @@ import { AuthValidation } from "../validations/auth.validation";
 import AuthController from "../controllers/auth.controller";
 import ForgotPasswordController from "../controllers/forgotPassword.controller";
 import { requestMeta } from "../middlewares/requestMeta";
+import { verifyAccessToken } from "../middlewares/auth.middleware";
+import { AuthRepository } from "../repositories/auth.repository";
 
 const authController = new AuthController();
 const forgotPasswordController = new ForgotPasswordController();
 const AuthRouter = Router();
-
 AuthRouter.post(
   "/register",
   validate(AuthValidation.register),
@@ -68,4 +69,5 @@ AuthRouter.post(
   validate(AuthValidation.social),
   authController.linkedinSignIn
 );
+AuthRouter.get("/me", verifyAccessToken, authController.userProfile);
 export default AuthRouter;

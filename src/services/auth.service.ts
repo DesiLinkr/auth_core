@@ -62,30 +62,17 @@ export class AuthService {
     );
 
     const accessToken = tokenRes.data.access_token;
-
-    const profileRes = await axios.get("https://api.linkedin.com/v2/me", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    const emailRes = await axios.get(
-      "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
+    const userInfoRes = await axios.get(
+      "https://api.linkedin.com/v2/userinfo",
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
-    let avatar_url = null;
-    const picture = profileRes.data.profilePicture?.["displayImage~"]?.elements;
 
-    if (picture && picture.length > 0) {
-      const last = picture[picture.length - 1];
-      avatar_url = last.identifiers[0].identifier;
-    }
-    const name =
-      profileRes.data.localizedFirstName +
-      " " +
-      profileRes.data.localizedLastName;
-
-    const email = emailRes.data.elements[0]["handle~"].emailAddress;
+    const data = userInfoRes.data;
+    const email = data.email;
+    const name = data.name;
+    const avatar_url = data.picture;
     if (!email) {
       return { error: "LinkedIn email not available", status: 400 };
     }
@@ -141,11 +128,11 @@ export class AuthService {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    const ghEmails = await axios.get("https://api.github.com/user/emails", {
+    const { data } = await axios.get("https://api.github.com/user/emails", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    const email = ghEmails.data.find((e: any) => e.primary)?.email;
+    const email = data.find((e: any) => e.primary)?.email;
 
     if (!email) {
       return { error: "GitHub email not available", status: 400 };
@@ -333,9 +320,8 @@ export class AuthService {
       },
       retry: 0,
     });
-    const { password, ...safeUser } = userData;
 
-    return safeUser;
+    return { message: "User registered sucessfully" };
   };
 
   public login = async (
@@ -377,12 +363,6 @@ export class AuthService {
     const token = await this.hasher.generateToken();
     await this.securecache.createToken(existing.user.id, token, expirytime);
 
-    await sendAcesssEmail({
-      name: existing.user.name,
-      to: existing.email,
-      secureAccountUrl: `${process.env.url}:${process.env.PORT}/${token}`,
-      ipAddress: ip,
-    });
     return Sessiontoken;
   };
 }
