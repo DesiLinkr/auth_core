@@ -20,7 +20,7 @@ class AuthController {
       );
       res.status(200).json(data);
     } catch (error) {
-      console.log(error);
+      res.status(500).json("Internal server error");
     }
   };
   public linkedinSignIn = async (req: Request, res: Response) => {

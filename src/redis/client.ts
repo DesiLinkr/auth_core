@@ -1,7 +1,14 @@
 import Redis from "ioredis";
 
 export const redisClient = new Redis(
-  process.env.REDIS_URL || "redis://localhost:6379"
+  process.env.REDIS_URL || "redis://localhost:6379",
+  {
+    maxRetriesPerRequest: null, // 🔥 REQUIRED
+    enableReadyCheck: false, // 🔥 IMPORTANT for cloud Redis
+    retryStrategy(times) {
+      return Math.min(times * 200, 2000);
+    },
+  }
 );
 
 redisClient.on("connect", () => console.log("Connected to Redis"));

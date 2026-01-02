@@ -2,7 +2,7 @@
 import { credentials } from "@grpc/grpc-js";
 import { AccessServiceClient } from "./generated/access";
 import { EmailClient } from "./generated/email";
-
+import "dotenv/config";
 const Acess_core = process.env.Acess_core_grpc_URL || "localhost:5052";
 const email_service = process.env.email_service || "localhost:4692";
 

@@ -1,7 +1,24 @@
 import express, { Application } from "express";
 import routes from "./routes/index.routes";
 import "dotenv/config";
-import * as grpc from "@grpc/grpc-js";
+console.log("DB URL exists:", !!process.env.DATABASE_URL);
+console.log("DB Host:", new URL(process.env.DATABASE_URL!).host);
+
+import { PrismaClient } from "@prisma/client";
+
+export const prisma = new PrismaClient();
+
+async function checkDB() {
+  try {
+    await prisma.$connect();
+    console.log("✅ DB connected");
+  } catch (err) {
+    console.error("❌ DB connection failed:", err);
+  }
+}
+
+checkDB();
+
 import cors from "cors";
 import cookieParser from "cookie-parser";
 class App {
@@ -17,7 +34,7 @@ class App {
   private middleware = () => {
     this.express.use(
       cors({
-        origin: "http://localhost:3001",
+        origin: "http://localhost:3000",
         credentials: true,
       })
     );
