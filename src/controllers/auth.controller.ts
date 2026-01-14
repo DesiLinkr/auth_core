@@ -20,7 +20,7 @@ class AuthController {
       );
       res.status(200).json(data);
     } catch (error) {
-      console.log(error);
+      res.status(500).json("Internal server error");
     }
   };
   public linkedinSignIn = async (req: Request, res: Response) => {
@@ -37,8 +37,8 @@ class AuthController {
       }
       res.cookie("refresh_token", result.refreshToken, {
         httpOnly: true, // ❗ cannot be accessed by JS
-        secure: false, // true in production (HTTPS)
-        sameSite: "lax", // works for OAuth redirects
+        secure: true, // true in production (HTTPS)
+        sameSite: "none", // works for OAuth redirects
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -65,8 +65,8 @@ class AuthController {
 
       res.cookie("refresh_token", result.refreshToken, {
         httpOnly: true, // ❗ cannot be accessed by JS
-        secure: false, // true in production (HTTPS)
-        sameSite: "lax", // works for OAuth redirects
+        secure: true, // true in production (HTTPS)
+        sameSite: "none", // works for OAuth redirects
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -95,8 +95,8 @@ class AuthController {
       }
       res.cookie("refresh_token", result.refreshToken, {
         httpOnly: true, // ❗ cannot be accessed by JS
-        secure: false, // true in production (HTTPS)
-        sameSite: "lax", // works for OAuth redirects
+        secure: true, // true in production (HTTPS)
+        sameSite: "none", // works for OAuth redirects
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
@@ -184,8 +184,8 @@ class AuthController {
       }
       res.cookie("refresh_token", result.refreshToken, {
         httpOnly: true, // ❗ cannot be accessed by JS
-        secure: false, // true in production (HTTPS)
-        sameSite: "lax", // works for OAuth redirects
+        secure: true, // true in production (HTTPS)
+        sameSite: "none", // works for OAuth redirects
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });

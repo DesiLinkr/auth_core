@@ -1,3 +1,4 @@
+import axios from "axios";
 import { ForgotPasswordTokenCache } from "../cache/forgotPassword.cache";
 import { ForgotPasswordRequest } from "../grpc/generated/email";
 import { AuthRepository } from "../repositories/auth.repository";
@@ -34,7 +35,6 @@ export class ForgotPasswordService {
   requestPasswordReset = async (email: string) => {
     const token = await this.hasher.generateToken();
     const userData: any = await this.AuthRepo.findByEmail(email);
-    console.log(userData);
 
     if (!userData) {
       return {
@@ -49,21 +49,31 @@ export class ForgotPasswordService {
       };
     }
     const expirytime = 900;
-
     await this.cache.createToken(userData.user.id, token, expirytime);
 
-    const req: ForgotPasswordRequest = {
+    const data: ForgotPasswordRequest = {
       to: email,
       data: {
         name: userData.user.name,
-        resetLink: `http://localhost:${process.env.PORT}/forg${token}`,
+        resetLink: `http://localhost:${process.env.PORT}/restpassword/${token}`,
         year: `${new Date().getFullYear()}`,
         expiry: Math.floor(expirytime / 60),
       },
       retry: 0,
     };
 
-    await sendforgotPassword(req);
+    console.log(data);
+    if (process.env.EMAIL_SERVICE_ISGRPC == "true") {
+      await sendforgotPassword(data);
+    } else {
+      console.log(process.env.GATEWAY_URL);
+
+      await axios.post(
+        `${process.env.GATEWAY_URL}/api/email/forgot-password`,
+        data
+      );
+    }
+
     return {
       message:
         "If this email exists, password reset instructions have been sent.",
