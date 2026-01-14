@@ -89,32 +89,15 @@ export const delAllsessions = (
   });
 };
 
-export const sendAcesssEmail = async (request: {
-  name: string;
-  to: string;
-  secureAccountUrl: string;
-  ipAddress: string;
-}): Promise<emailServiceResponse> => {
+export const sendAcesssEmail = async (
+  request: AccessEmailRequest
+): Promise<emailServiceResponse> => {
   try {
     // Fetch IP location using ipapi.co
-    const res = await axios.get(`https://ipapi.co/${request.ipAddress}/json/`);
-
-    const req: AccessEmailRequest = {
-      to: request.to,
-      data: {
-        location: `${res?.data?.city}, ${res?.data?.country_name}`,
-        name: request.name,
-        year: `${new Date().getFullYear()}`,
-        ipAddress: request.ipAddress,
-        secureAccountUrl: request.secureAccountUrl,
-        dateTime: `${Customformat(new Date())}`,
-      },
-      retry: 0,
-    };
 
     // Wrap gRPC call in a Promise for await support
     return await new Promise((resolve, reject) => {
-      grpcClient.email.sendAcesssEmail(req, (error, response) => {
+      grpcClient.email.sendAcesssEmail(request, (error, response) => {
         if (error) reject(error);
         else resolve(response);
       });

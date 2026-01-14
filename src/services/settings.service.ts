@@ -3,6 +3,8 @@ import { settingsRepository } from "../repositories/settings.repository";
 import { Hasher } from "../utils/hash.util";
 import { sendVerificationEmail } from "../utils/grpc.util";
 import { EmailVerificationTokenCache } from "../cache/emailVerification.cache";
+import axios from "axios";
+import { VerificationEmailRequest } from "../grpc/generated/email";
 export class SettingsService {
   private readonly hasher: Hasher;
   private readonly authRepo: AuthRepository;
@@ -73,7 +75,7 @@ export class SettingsService {
       const expirytime = 600;
       await this.Verificationcache.createToken(userId, token, expirytime);
 
-      await sendVerificationEmail({
+      const data: VerificationEmailRequest = {
         to: email,
         data: {
           name: user?.name,
@@ -83,7 +85,16 @@ export class SettingsService {
           context: "secondary",
         },
         retry: 0,
-      });
+      };
+
+      if (process.env.EMAIL_SERVICE_ISGRPC == "true") {
+        sendVerificationEmail(data);
+      } else {
+        await axios.post(
+          `${process.env.GATEWAY_URL}/api/email/verification`,
+          data
+        );
+      }
       return {
         message: "email addded and verification email sent successfully  ",
       };

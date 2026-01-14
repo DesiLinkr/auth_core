@@ -1,3 +1,5 @@
+import geoip from "geoip-lite";
+
 import { AuthRepository } from "../repositories/auth.repository";
 import { Hasher } from "../utils/hash.util";
 import {
@@ -16,6 +18,8 @@ import { SecureTokenCache } from "../cache/secure.cache";
 import { delsessionsRequest } from "../grpc/generated/access";
 import axios from "axios";
 import { string } from "joi";
+import { log } from "@grpc/grpc-js/build/src/logging";
+import { Customformat } from "../utils/timeformat";
 
 export class AuthService {
   private readonly authRepo: AuthRepository;
@@ -95,18 +99,56 @@ export class AuthService {
     const userId = userRecord.user?.id || userRecord.id;
     const userName = userRecord.user?.name || userRecord.name;
     const userEmail = userRecord.email;
-    const session = await createSession({ ip, userId, userAgent });
+    let Sessiontoken;
+    if (process.env.ACESS_CORE_ISGRPC == "true") {
+      Sessiontoken = await createSession({
+        ip,
+        userId,
+        userAgent,
+      });
+    } else {
+      const { data } = await axios.post(
+        `${process.env.GATEWAY_URL}/api/sessions`,
+        {
+          ip,
+          userId,
+          userAgent,
+        }
+      );
+      Sessiontoken = data;
+      console.log(data);
+    }
+
     const secureToken = await this.hasher.generateToken();
     await this.securecache.createToken(userId, secureToken, 600);
     if (oldUser) {
-      await sendAcesssEmail({
-        name: userName,
+      const res = geoip.lookup(ip);
+
+      const data: AccessEmailRequest = {
         to: userEmail,
-        secureAccountUrl: `${process.env.url}:${process.env.PORT}/${secureToken}`,
-        ipAddress: ip,
-      });
+        data: {
+          location: `${res?.city},${res?.country}`,
+          name: userName,
+          year: `${new Date().getFullYear()}`,
+          ipAddress: ip,
+          secureAccountUrl: `${process.env.SHELL_URL}/secure/${secureToken}`,
+          dateTime: `${Customformat(
+            new Date(
+              new Date().toLocaleString("en-US", {
+                timeZone: "Asia/Kolkata",
+              })
+            )
+          )}`,
+        },
+        retry: 0,
+      };
+      if (process.env.EMAIL_SERVICE_ISGRPC == "true") {
+        await sendAcesssEmail(data);
+      } else {
+        await axios.post(`${process.env.GATEWAY_URL}/api/email/access`, data);
+      }
     }
-    return session;
+    return Sessiontoken;
   };
 
   public githubSignIn = async (code: string, ip: string, userAgent: string) => {
@@ -139,11 +181,11 @@ export class AuthService {
     }
 
     let userRecord: any = await this.authRepo.findByEmail(email);
-    console.log(userRecord);
 
     if (userRecord && !userRecord.isVerified) {
       return { error: "email not verified", status: 409 };
     }
+    console.log(userRecord);
 
     if (!userRecord) {
       oldUser = false;
@@ -160,20 +202,56 @@ export class AuthService {
     const userId = userRecord.user?.id || userRecord.id;
     const userName = userRecord.user?.name || userRecord.name;
     const userEmail = userRecord.email;
-
-    const session = await createSession({ ip, userId, userAgent });
-
+    let Sessiontoken;
+    if (process.env.ACESS_CORE_ISGRPC == "true") {
+      Sessiontoken = await createSession({
+        ip,
+        userId,
+        userAgent,
+      });
+    } else {
+      const { data } = await axios.post(
+        `${process.env.GATEWAY_URL}/api/sessions`,
+        {
+          ip,
+          userId,
+          userAgent,
+        }
+      );
+      Sessiontoken = data;
+    }
     const secureToken = await this.hasher.generateToken();
     await this.securecache.createToken(userId, secureToken, 600);
     if (oldUser) {
-      await sendAcesssEmail({
-        name: userName,
+      const res = geoip.lookup(ip);
+
+      const data: AccessEmailRequest = {
         to: userEmail,
-        secureAccountUrl: `${process.env.url}:${process.env.PORT}/${secureToken}`,
-        ipAddress: ip,
-      });
+        data: {
+          location: `${res?.city},${res?.country}`,
+          name: userName,
+          year: `${new Date().getFullYear()}`,
+          ipAddress: ip,
+          secureAccountUrl: `${process.env.SHELL_URL}/secure/${secureToken}`,
+          dateTime: `${Customformat(
+            new Date(
+              new Date().toLocaleString("en-US", {
+                timeZone: "Asia/Kolkata",
+              })
+            )
+          )}`,
+        },
+        retry: 0,
+      };
+
+      if (process.env.EMAIL_SERVICE_ISGRPC == "true") {
+        await sendAcesssEmail(data);
+      } else {
+        await axios.post(`${process.env.GATEWAY_URL}/api/email/access`, data);
+      }
     }
-    return session;
+
+    return Sessiontoken;
   };
   public googleSignIn = async (
     credential: string,
@@ -215,23 +293,55 @@ export class AuthService {
     const userId = userRecord.user?.id || userRecord.id;
     const userName = userRecord.user?.name || userRecord.name;
     const userEmail = userRecord.email;
+    let Sessiontoken;
 
-    const Sessiontoken = await createSession({
-      ip,
-      userId,
-      userAgent,
-    });
+    if (process.env.ACESS_CORE_ISGRPC == "true") {
+      Sessiontoken = await createSession({
+        ip,
+        userId,
+        userAgent,
+      });
+    } else {
+      const { data } = await axios.post(
+        `${process.env.GATEWAY_URL}/api/sessions`,
+        {
+          ip,
+          userId,
+          userAgent,
+        }
+      );
+      Sessiontoken = data;
+    }
     const expirytime = 600;
-    const token = await this.hasher.generateToken();
-    await this.securecache.createToken(userId, token, expirytime);
+    const secureToken = await this.hasher.generateToken();
+    await this.securecache.createToken(userId, secureToken, expirytime);
 
     if (oldUser) {
-      await sendAcesssEmail({
-        name: userName,
+      const res = geoip.lookup(ip);
+
+      const data: AccessEmailRequest = {
         to: userEmail,
-        secureAccountUrl: `${process.env.url}:${process.env.PORT}/${token}`,
-        ipAddress: ip,
-      });
+        data: {
+          location: `${res?.city},${res?.country}`,
+          name: userName,
+          year: `${new Date().getFullYear()}`,
+          ipAddress: ip,
+          secureAccountUrl: `${process.env.SHELL_URL}/secure/${secureToken}`,
+          dateTime: `${Customformat(
+            new Date(
+              new Date().toLocaleString("en-US", {
+                timeZone: "Asia/Kolkata",
+              })
+            )
+          )}`,
+        },
+        retry: 0,
+      };
+      if (process.env.EMAIL_SERVICE_ISGRPC == "true") {
+        await sendAcesssEmail(data);
+      } else {
+        await axios.post(`${process.env.GATEWAY_URL}/api/email/access`, data);
+      }
     }
 
     return Sessiontoken;
@@ -273,9 +383,16 @@ export class AuthService {
     const hashedPassword = await this.hasher.Password(newPassword);
 
     await this.authRepo.setPassword(userId, hashedPassword);
-    await delAllsessions({
-      userId,
-    });
+
+    if (process.env.ACESS_CORE_ISGRPC == "true") {
+      await delAllsessions({
+        userId,
+      });
+    } else {
+      await axios.delete(
+        `${process.env.GATEWAY_URL}/api/sessions/user/${userId}`
+      );
+    }
     await this.securecache.deleteToken(token);
 
     return {
@@ -308,18 +425,25 @@ export class AuthService {
     const token = await this.hasher.generateToken();
     const expirytime = 600;
     await this.Verificationcache.createToken(userData.id, token, expirytime);
-
-    sendVerificationEmail({
+    const data: VerificationEmailRequest = {
       to: email,
       data: {
         name,
         expiry: Math.floor(expirytime / 60),
-        verifyUrl: `${process.env.url}:${process.env.PORT}/${token}`,
+        verifyUrl: `${process.env.SHELL_URL}/${token}`,
         year: `${new Date().getFullYear()}`,
         context: "registration",
       },
       retry: 0,
-    });
+    };
+    if (process.env.EMAIL_SERVICE_ISGRPC == "true") {
+      sendVerificationEmail(data);
+    } else {
+      await axios.post(
+        `${process.env.GATEWAY_URL}/api/email/verification`,
+        data
+      );
+    }
 
     return { message: "User registered sucessfully" };
   };
@@ -353,16 +477,55 @@ export class AuthService {
       return { error: "Invalid credentials", status: 401 };
     }
 
-    const Sessiontoken = await createSession({
-      ip,
-      userId: existing.user.id,
-      userAgent,
-    });
+    let Sessiontoken;
+
+    if (process.env.ACESS_CORE_ISGRPC == "true") {
+      Sessiontoken = await createSession({
+        ip,
+        userId: existing.user.id,
+        userAgent,
+      });
+    } else {
+      const { data } = await axios.post(
+        `${process.env.GATEWAY_URL}/api/sessions`,
+        {
+          ip,
+          userId: existing.user.id,
+          userAgent,
+        }
+      );
+      Sessiontoken = data;
+    }
     const expirytime = 600;
 
-    const token = await this.hasher.generateToken();
-    await this.securecache.createToken(existing.user.id, token, expirytime);
+    const secureToken = await this.hasher.generateToken();
+    await this.securecache.createToken(
+      existing.user.id,
+      secureToken,
+      expirytime
+    );
 
+    const res = geoip.lookup(ip);
+    console.log(res);
+
+    const data: AccessEmailRequest = {
+      to: email,
+      data: {
+        location: `${res?.city},${res?.country}`,
+        name: existing.user.name,
+        year: `${new Date().getFullYear()}`,
+        ipAddress: ip,
+        secureAccountUrl: `${process.env.SHELL_URL}/secure/${secureToken}`,
+        dateTime: `${Customformat(new Date())}`,
+      },
+      retry: 0,
+    };
+
+    if (process.env.EMAIL_SERVICE_ISGRPC == "true") {
+      await sendAcesssEmail(data);
+    } else {
+      await axios.post(`${process.env.GATEWAY_URL}/api/email/access`, data);
+    }
     return Sessiontoken;
   };
 }
